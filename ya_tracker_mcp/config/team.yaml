@@ -1,0 +1,10 @@
+team: []
+# Example:
+#  - login: "user3370"
+#    name: "Ivan Ivanov"
+#    role: "Backend developer"
+#    areas:
+#      - "API"
+#      - "auth"
+#    queues: ["DEV"]
+#    notes: "Tech lead"

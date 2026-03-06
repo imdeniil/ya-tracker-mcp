@@ -1,0 +1,51 @@
+presets:
+  bug_report:
+    name: "Bug report"
+    description: "Bug with reproduction steps"
+    params:
+      type: "bug"
+      priority: "critical"
+      tags: ["bug"]
+    description_template: |
+      ## Description
+      {input.description}
+
+      ## Steps to reproduce
+      {input.steps}
+
+      ## Expected result
+      {input.expected}
+
+      ## Actual result
+      {input.actual}
+    rules:
+      - "Always include reproduction steps"
+      - "Critical priority only if blocks release"
+
+  feature_request:
+    name: "Feature request"
+    description: "New feature or improvement"
+    params:
+      type: "task"
+      priority: "normal"
+    description_template: |
+      ## What needs to be done
+      {input.what}
+
+      ## Why (business value)
+      {input.why}
+
+      ## Acceptance criteria
+      {input.acceptance_criteria}
+    rules:
+      - "Always fill 'Why' section"
+      - "If task > 8 SP, decompose"
+
+  quick_task:
+    name: "Quick task"
+    description: "Simple task without formal requirements"
+    params:
+      type: "task"
+      priority: "normal"
+    description_template: "{input.description}"
+    rules: []
