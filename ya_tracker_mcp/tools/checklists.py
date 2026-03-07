@@ -116,3 +116,17 @@ def register_checklist_tools(mcp: FastMCP):
         tracker = ctx.lifespan_context["tracker"]
         await tracker.issues.checklists.item.delete(issue_key, item_id)
         return f"Checklist item {item_id} deleted from {issue_key}."
+
+    @mcp.tool()
+    async def delete_checklist(
+        ctx: Context,
+        issue_key: str,
+    ) -> str:
+        """Delete the entire checklist from an issue.
+
+        Args:
+            issue_key: Issue key (e.g. "DEV-123")
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        await tracker.issues.checklists.delete(issue_key)
+        return f"Checklist deleted from {issue_key}."

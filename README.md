@@ -1,6 +1,6 @@
 # ya-tracker-mcp
 
-MCP server for [Yandex Tracker](https://tracker.yandex.ru/) API. Provides 68 tools for managing issues, projects, boards, sprints, worklog and more through the [Model Context Protocol](https://modelcontextprotocol.io/).
+MCP server for [Yandex Tracker](https://tracker.yandex.ru/) API. Provides 140 tools for managing issues, projects, boards, sprints, worklog and more through the [Model Context Protocol](https://modelcontextprotocol.io/).
 
 Built with [FastMCP](https://gofastmcp.com) and [YaTrackerApi](https://pypi.org/project/YaTrackerApi/).
 
@@ -58,9 +58,9 @@ You need an OAuth token and organization ID:
 1. **OAuth token** - get at [oauth.yandex.ru](https://oauth.yandex.ru/) with Tracker access
 2. **Organization ID** - find in Tracker admin settings or via API `GET /v3/myself`
 
-## Tools (68)
+## Tools (140)
 
-### Issues
+### Issues (7)
 | Tool | Description |
 |------|-------------|
 | `create_issue` | Create issue (queue, summary, type, priority, assignee...) |
@@ -69,8 +69,9 @@ You need an OAuth token and organization ID:
 | `search_issues` | Search with query language or filters |
 | `count_issues` | Count matching issues |
 | `move_issue` | Move to another queue |
+| `issue_changelog` | Get issue change history (filter by field) |
 
-### Comments
+### Comments (4)
 | Tool | Description |
 |------|-------------|
 | `add_comment` | Add comment with optional summonees |
@@ -78,20 +79,20 @@ You need an OAuth token and organization ID:
 | `update_comment` | Update comment text |
 | `delete_comment` | Delete comment |
 
-### Status Transitions
+### Status Transitions (2)
 | Tool | Description |
 |------|-------------|
 | `list_transitions` | List available transitions |
 | `transition_issue` | Execute status transition |
 
-### Links
+### Links (3)
 | Tool | Description |
 |------|-------------|
 | `link_issues` | Create link (relates, depends on, subtask, epic...) |
 | `list_links` | List issue links |
 | `delete_link` | Delete link |
 
-### Entities (Projects / Portfolios / Goals)
+### Entities — Projects / Portfolios / Goals (23)
 | Tool | Description |
 |------|-------------|
 | `create_entity` | Create project, portfolio, or goal |
@@ -99,98 +100,184 @@ You need an OAuth token and organization ID:
 | `update_entity` | Update entity |
 | `delete_entity` | Delete entity |
 | `search_entities` | Search entities |
+| `entity_changelog` | Get entity change history |
+| `update_key_results` | Update goal key results |
+| `update_entity_metrics` | Update entity metrics |
+| `list_entity_comments` | List entity comments |
+| `add_entity_comment` | Add comment to entity |
+| `update_entity_comment` | Update entity comment |
+| `delete_entity_comment` | Delete entity comment |
+| `list_entity_links` | List entity links |
+| `create_entity_link` | Create link between entities |
+| `delete_entity_link` | Delete entity link |
+| `list_entity_attachments` | List entity attachments |
+| `delete_entity_attachment` | Delete entity attachment |
+| `add_entity_checklist_item` | Add checklist item to entity |
+| `update_entity_checklist_item` | Update entity checklist item |
+| `delete_entity_checklist_item` | Delete entity checklist item |
+| `bulk_update_entities` | Bulk update entities |
+| `get_entity_settings` | Get entity access settings |
+| `update_entity_settings` | Update entity access settings |
 
-### Boards & Sprints
+### Boards & Sprints (12)
 | Tool | Description |
 |------|-------------|
 | `list_boards` | List all boards |
 | `get_board` | Board details |
+| `create_board` | Create board |
+| `update_board` | Update board settings |
+| `delete_board` | Delete board |
 | `list_board_columns` | Board columns with statuses |
+| `create_board_column` | Create column |
+| `update_board_column` | Update column |
+| `delete_board_column` | Delete column |
 | `list_sprints` | Board sprints |
+| `get_sprint` | Sprint details |
 | `create_sprint` | Create sprint |
 
-### Worklog
+### Worklog (5)
 | Tool | Description |
 |------|-------------|
 | `add_worklog` | Log time (ISO 8601 duration) |
 | `list_worklog` | List worklog entries |
 | `update_worklog` | Update entry |
 | `delete_worklog` | Delete entry |
+| `search_worklog` | Search worklog across all issues |
 
-### Checklists
+### Checklists (5)
 | Tool | Description |
 |------|-------------|
 | `list_checklist` | List checklist items |
 | `add_checklist_item` | Add item |
 | `update_checklist_item` | Update item (text, checked, assignee) |
 | `delete_checklist_item` | Delete item |
+| `delete_checklist` | Delete entire checklist |
 
-### Attachments
+### Attachments (2)
 | Tool | Description |
 |------|-------------|
 | `list_attachments` | List attachments |
 | `delete_attachment` | Delete attachment |
 
-### Queues
+### Queues (10)
 | Tool | Description |
 |------|-------------|
 | `list_queues` | List all queues |
 | `get_queue` | Queue details (expand: components, versions) |
+| `create_queue` | Create queue |
+| `delete_queue` | Delete queue |
+| `restore_queue` | Restore deleted queue |
+| `list_queue_versions` | List queue versions |
+| `create_queue_version` | Create version |
+| `delete_queue_tag` | Delete queue tag |
+| `get_queue_user_permissions` | Get user permissions for queue |
+| `update_queue_permissions` | Update queue access permissions |
 
-### Users
+### Users (3)
 | Tool | Description |
 |------|-------------|
 | `get_myself` | Current user info |
+| `get_user` | Get specific user info |
 | `list_users` | Organization users |
 
-### Directories (Reference Data)
+### Directories — Reference Data (24)
 | Tool | Description |
 |------|-------------|
 | `list_issue_types` | All issue types |
+| `create_issue_type` | Create issue type |
+| `update_issue_type` | Update issue type |
 | `list_statuses` | All statuses |
+| `create_status` | Create status |
+| `update_status` | Update status |
 | `list_priorities` | All priorities |
+| `create_priority` | Create priority |
+| `update_priority` | Update priority |
 | `list_resolutions` | All resolutions |
+| `create_resolution` | Create resolution |
+| `update_resolution` | Update resolution |
 | `list_global_fields` | Global fields |
+| `get_field` | Get field details |
+| `create_field` | Create global field |
+| `update_field` | Update global field |
 | `list_queue_fields` | Queue fields (including local) |
+| `get_local_field` | Get local field |
+| `create_local_field` | Create local field |
+| `update_local_field` | Update local field |
 | `list_queue_tags` | Queue tags |
 | `list_components` | All components |
+| `create_component` | Create component |
+| `update_component` | Update component |
 
-### Automations
+### Automations (15)
 | Tool | Description |
 |------|-------------|
-| `list_macros` / `get_macro` | Queue macros |
-| `list_triggers` / `get_trigger` | Queue triggers |
-| `list_autoactions` / `get_autoaction` | Queue autoactions |
+| `list_macros` | List queue macros |
+| `get_macro` | Get macro details |
+| `create_macro` | Create macro |
+| `update_macro` | Update macro |
+| `delete_macro` | Delete macro |
+| `list_triggers` | List queue triggers |
+| `get_trigger` | Get trigger details |
+| `create_trigger` | Create trigger |
+| `update_trigger` | Update trigger |
+| `get_trigger_logs` | Get trigger execution logs |
+| `list_autoactions` | List queue autoactions |
+| `get_autoaction` | Get autoaction details |
+| `create_autoaction` | Create autoaction |
+| `get_autoaction_logs` | Get autoaction execution logs |
 
-### Bulk Operations
+### Bulk Operations (5)
 | Tool | Description |
 |------|-------------|
 | `bulk_update` | Update multiple issues |
 | `bulk_move` | Move issues to queue |
 | `bulk_transition` | Transition multiple issues |
 | `get_bulk_status` | Check operation status |
+| `get_bulk_failed_issues` | Get failed issues from bulk operation |
 
-### Import
+### Import (4)
 | Tool | Description |
 |------|-------------|
 | `import_issue` | Import with original dates/author |
 | `import_comment` | Import comment |
 | `import_link` | Import link |
+| `import_file` | Import file attachment |
 
-### Overviews (Aggregated Reports)
+### Filters (3)
+| Tool | Description |
+|------|-------------|
+| `create_filter` | Create saved filter |
+| `get_filter` | Get filter details |
+| `update_filter` | Update filter |
+
+### Dashboards (2)
+| Tool | Description |
+|------|-------------|
+| `create_dashboard` | Create dashboard |
+| `create_cycle_time_widget` | Create cycle time widget |
+
+### External Links (4)
+| Tool | Description |
+|------|-------------|
+| `list_external_applications` | List registered external apps |
+| `list_external_links` | List external links on issue |
+| `create_external_link` | Create external link |
+| `delete_external_link` | Delete external link |
+
+### Overviews (2)
 | Tool | Description |
 |------|-------------|
 | `issue_overview` | Full issue summary (status, links, comments, checklist, worklog) |
 | `queue_overview` | Queue summary (open count, top priority issues) |
 
-### Presets
+### Presets (3)
 | Tool | Description |
 |------|-------------|
 | `list_presets` | Available task presets |
 | `get_preset` | Preset details (params, template, rules) |
 | `create_from_preset` | Create issue from preset |
 
-### Team Directory
+### Team Directory (3)
 | Tool | Description |
 |------|-------------|
 | `list_team` | Team members |

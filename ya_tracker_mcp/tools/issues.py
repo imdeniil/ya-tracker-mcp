@@ -217,6 +217,55 @@ def register_issue_tools(mcp: FastMCP):
         return f"Count: {count}"
 
     @mcp.tool()
+    async def issue_changelog(
+        ctx: Context,
+        issue_key: str,
+        field: str | None = None,
+        per_page: int | None = None,
+    ) -> str:
+        """Get issue changelog (history of changes).
+
+        Args:
+            issue_key: Issue key (e.g. "DEV-123")
+            field: Filter by field name (e.g. "status", "assignee")
+            per_page: Results per page
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if field is not None:
+            kwargs["field"] = field
+        if per_page is not None:
+            kwargs["per_page"] = per_page
+
+        changes = await tracker.issues.changelog(issue_key, **kwargs)
+
+        if not changes:
+            return f"No changelog entries for {issue_key}."
+
+        lines = [f"Changelog for {issue_key} ({len(changes)} entries):\n"]
+        for entry in changes:
+            updated = entry.get("updatedAt", "")
+            updater = entry.get("updatedBy", {})
+            if isinstance(updater, dict):
+                updater = updater.get("display", "?")
+            fields = entry.get("fields", [])
+            field_changes = []
+            for f in fields:
+                fname = f.get("field", {})
+                if isinstance(fname, dict):
+                    fname = fname.get("display", fname.get("id", "?"))
+                frm = f.get("from", "")
+                if isinstance(frm, dict):
+                    frm = frm.get("display", str(frm))
+                to = f.get("to", "")
+                if isinstance(to, dict):
+                    to = to.get("display", str(to))
+                field_changes.append(f"{fname}: {frm} → {to}")
+            changes_str = "; ".join(field_changes) if field_changes else "no field details"
+            lines.append(f"- [{updated}] {updater}: {changes_str}")
+        return "\n".join(lines)
+
+    @mcp.tool()
     async def move_issue(
         ctx: Context,
         issue_key: str,

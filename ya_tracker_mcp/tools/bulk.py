@@ -105,3 +105,32 @@ def register_bulk_tools(mcp: FastMCP):
         if failed:
             line += f", {failed} failed"
         return line
+
+    @mcp.tool()
+    async def get_bulk_failed_issues(
+        ctx: Context,
+        bulk_change_id: str,
+    ) -> str:
+        """Get list of issues that failed in a bulk operation.
+
+        Args:
+            bulk_change_id: Bulk operation ID
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        result = await tracker.issues.bulk.get_failed_issues(bulk_change_id)
+
+        if not result:
+            return f"No failed issues in bulk operation {bulk_change_id}."
+
+        lines = [f"Failed issues in bulk {bulk_change_id}:\n"]
+        if isinstance(result, list):
+            for item in result:
+                if isinstance(item, dict):
+                    key = item.get("key", item.get("id", "?"))
+                    errors = item.get("errors", [])
+                    lines.append(f"- {key}: {errors}")
+                else:
+                    lines.append(f"- {item}")
+        else:
+            lines.append(str(result))
+        return "\n".join(lines)

@@ -208,6 +208,467 @@ def register_entity_tools(mcp: FastMCP):
             lines.append(_format_entity_short(e, entity_type))
         return "\n".join(lines)
 
+    @mcp.tool()
+    async def entity_changelog(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        per_page: int | None = None,
+    ) -> str:
+        """Get changelog of a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+            per_page: Results per page
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if per_page is not None:
+            kwargs["per_page"] = per_page
+
+        changes = await tracker.entities.changelog(entity_type, entity_id, **kwargs)
+
+        if not changes:
+            return f"No changelog for {entity_type} {entity_id}."
+
+        lines = [f"Changelog for {entity_type} {entity_id} ({len(changes)} entries):\n"]
+        for entry in changes:
+            updated = entry.get("updatedAt", "")
+            updater = entry.get("updatedBy", {})
+            if isinstance(updater, dict):
+                updater = updater.get("display", "?")
+            fields = entry.get("fields", [])
+            field_changes = []
+            for f in fields:
+                fname = f.get("field", {})
+                if isinstance(fname, dict):
+                    fname = fname.get("display", fname.get("id", "?"))
+                frm = f.get("from", "")
+                if isinstance(frm, dict):
+                    frm = frm.get("display", str(frm))
+                to = f.get("to", "")
+                if isinstance(to, dict):
+                    to = to.get("display", str(to))
+                field_changes.append(f"{fname}: {frm} → {to}")
+            changes_str = "; ".join(field_changes) if field_changes else "no details"
+            lines.append(f"- [{updated}] {updater}: {changes_str}")
+        return "\n".join(lines)
+
+    @mcp.tool()
+    async def update_key_results(
+        ctx: Context,
+        entity_id: str,
+        key_result_items: list[dict],
+        comment: str | None = None,
+    ) -> str:
+        """Update key results of a goal.
+
+        Args:
+            entity_id: Goal entity ID
+            key_result_items: List of key result items (dicts with fields like target, current, etc.)
+            comment: Optional comment
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if comment is not None:
+            kwargs["comment"] = comment
+
+        result = await tracker.entities.update_key_results(entity_id, key_result_items, **kwargs)
+        return f"Key results updated for goal {entity_id}."
+
+    @mcp.tool()
+    async def update_entity_metrics(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        metric_items: list[dict],
+        comment: str | None = None,
+    ) -> str:
+        """Update metrics of a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+            metric_items: List of metric items
+            comment: Optional comment
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if comment is not None:
+            kwargs["comment"] = comment
+
+        result = await tracker.entities.update_metrics(entity_type, entity_id, metric_items, **kwargs)
+        return f"Metrics updated for {entity_type} {entity_id}."
+
+    # --- Entity comments ---
+
+    @mcp.tool()
+    async def list_entity_comments(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+    ) -> str:
+        """List comments on a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        comments = await tracker.entities.comments.list(entity_type, entity_id)
+
+        if not comments:
+            return f"No comments on {entity_type} {entity_id}."
+
+        lines = [f"Comments on {entity_type} {entity_id} ({len(comments)}):\n"]
+        for c in comments:
+            cid = c.get("id", "?")
+            text = c.get("text", "")[:200]
+            author = c.get("createdBy", {})
+            if isinstance(author, dict):
+                author = author.get("display", "?")
+            created = c.get("createdAt", "")
+            lines.append(f"- [{cid}] {author} ({created}): {text}")
+        return "\n".join(lines)
+
+    @mcp.tool()
+    async def add_entity_comment(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        text: str,
+        summonees: list[str] | None = None,
+    ) -> str:
+        """Add a comment to a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+            text: Comment text
+            summonees: List of user logins to mention
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if summonees is not None:
+            kwargs["summonees"] = summonees
+
+        comment = await tracker.entities.comments.create(entity_type, entity_id, text, **kwargs)
+        cid = comment.get("id", "?")
+        return f"Comment [{cid}] added to {entity_type} {entity_id}."
+
+    @mcp.tool()
+    async def update_entity_comment(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        comment_id: str,
+        text: str,
+    ) -> str:
+        """Update a comment on a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+            comment_id: Comment ID
+            text: New comment text
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        comment = await tracker.entities.comments.update(entity_type, entity_id, comment_id, text=text)
+        return f"Comment [{comment_id}] updated on {entity_type} {entity_id}."
+
+    @mcp.tool()
+    async def delete_entity_comment(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        comment_id: str,
+    ) -> str:
+        """Delete a comment from a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+            comment_id: Comment ID
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        await tracker.entities.comments.delete(entity_type, entity_id, comment_id)
+        return f"Comment [{comment_id}] deleted from {entity_type} {entity_id}."
+
+    # --- Entity links ---
+
+    @mcp.tool()
+    async def list_entity_links(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+    ) -> str:
+        """List links of a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        links = await tracker.entities.links.get(entity_type, entity_id)
+
+        if not links:
+            return f"No links for {entity_type} {entity_id}."
+
+        lines = [f"Links for {entity_type} {entity_id}:\n"]
+        if isinstance(links, list):
+            for link in links:
+                rel = link.get("relationship", "?")
+                target = link.get("entity", {})
+                if isinstance(target, dict):
+                    target = target.get("display", target.get("id", "?"))
+                lines.append(f"- {rel}: {target}")
+        else:
+            lines.append(str(links))
+        return "\n".join(lines)
+
+    @mcp.tool()
+    async def create_entity_link(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        relationship: str,
+        entity: str,
+    ) -> str:
+        """Create a link between entities.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Source entity ID
+            relationship: Relationship type
+            entity: Target entity ID
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        result = await tracker.entities.links.create(entity_type, entity_id, relationship, entity)
+        return f"Link created: {entity_type} {entity_id} —[{relationship}]→ {entity}"
+
+    @mcp.tool()
+    async def delete_entity_link(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        right: str,
+    ) -> str:
+        """Delete a link from an entity.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+            right: Target entity ID to unlink
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        await tracker.entities.links.delete(entity_type, entity_id, right)
+        return f"Link deleted from {entity_type} {entity_id} to {right}."
+
+    # --- Entity attachments ---
+
+    @mcp.tool()
+    async def list_entity_attachments(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+    ) -> str:
+        """List attachments of a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        attachments = await tracker.entities.attachments.list(entity_type, entity_id)
+
+        if not attachments:
+            return f"No attachments for {entity_type} {entity_id}."
+
+        lines = [f"Attachments for {entity_type} {entity_id}:\n"]
+        for a in attachments:
+            aid = a.get("id", "?")
+            name = a.get("name", "")
+            size = a.get("size", "?")
+            lines.append(f"- [{aid}] {name} ({size} bytes)")
+        return "\n".join(lines)
+
+    @mcp.tool()
+    async def delete_entity_attachment(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        file_id: str,
+    ) -> str:
+        """Delete an attachment from a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+            file_id: Attachment file ID
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        await tracker.entities.attachments.delete(entity_type, entity_id, file_id)
+        return f"Attachment [{file_id}] deleted from {entity_type} {entity_id}."
+
+    # --- Entity checklists ---
+
+    @mcp.tool()
+    async def add_entity_checklist_item(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        text: str,
+        checked: bool | None = None,
+        assignee: str | None = None,
+        deadline: str | None = None,
+    ) -> str:
+        """Add a checklist item to a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+            text: Checklist item text
+            checked: Whether the item is checked
+            assignee: Assignee login
+            deadline: Deadline (YYYY-MM-DD)
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if checked is not None:
+            kwargs["checked"] = checked
+        if assignee is not None:
+            kwargs["assignee"] = assignee
+        if deadline is not None:
+            kwargs["deadline"] = deadline
+
+        result = await tracker.entities.checklists.create(entity_type, entity_id, text, **kwargs)
+        return f"Checklist item added to {entity_type} {entity_id}."
+
+    @mcp.tool()
+    async def update_entity_checklist_item(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        item_id: str,
+        text: str | None = None,
+        checked: bool | None = None,
+        assignee: str | None = None,
+        deadline: str | None = None,
+    ) -> str:
+        """Update a checklist item on a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+            item_id: Checklist item ID
+            text: New text
+            checked: New checked status
+            assignee: New assignee login
+            deadline: New deadline (YYYY-MM-DD)
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if text is not None:
+            kwargs["text"] = text
+        if checked is not None:
+            kwargs["checked"] = checked
+        if assignee is not None:
+            kwargs["assignee"] = assignee
+        if deadline is not None:
+            kwargs["deadline"] = deadline
+
+        result = await tracker.entities.checklists.item.update(
+            entity_type, entity_id, item_id, **kwargs
+        )
+        return f"Checklist item [{item_id}] updated on {entity_type} {entity_id}."
+
+    @mcp.tool()
+    async def delete_entity_checklist_item(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        item_id: str,
+    ) -> str:
+        """Delete a checklist item from a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+            item_id: Checklist item ID
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        await tracker.entities.checklists.item.delete(entity_type, entity_id, item_id)
+        return f"Checklist item [{item_id}] deleted from {entity_type} {entity_id}."
+
+    # --- Entity bulk ---
+
+    @mcp.tool()
+    async def bulk_update_entities(
+        ctx: Context,
+        entity_type: str,
+        entity_ids: list[str],
+        comment: str | None = None,
+    ) -> str:
+        """Bulk update multiple entities.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_ids: List of entity IDs
+            comment: Optional comment
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if comment is not None:
+            kwargs["comment"] = comment
+
+        result = await tracker.entities.bulk.update(entity_type, entity_ids, **kwargs)
+        return f"Bulk update started for {len(entity_ids)} {entity_type}(s)."
+
+    # --- Entity settings ---
+
+    @mcp.tool()
+    async def get_entity_settings(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+    ) -> str:
+        """Get access settings of a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        settings = await tracker.entities.settings.get(entity_type, entity_id)
+        return f"Settings for {entity_type} {entity_id}:\n{settings}"
+
+    @mcp.tool()
+    async def update_entity_settings(
+        ctx: Context,
+        entity_type: str,
+        entity_id: str,
+        permission_sources: list[str] | None = None,
+        acl: list[dict] | None = None,
+    ) -> str:
+        """Update access settings of a project, portfolio, or goal.
+
+        Args:
+            entity_type: "project", "portfolio", or "goal"
+            entity_id: Entity ID
+            permission_sources: Permission sources list
+            acl: Access control list
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if permission_sources is not None:
+            kwargs["permission_sources"] = permission_sources
+        if acl is not None:
+            kwargs["acl"] = acl
+
+        result = await tracker.entities.settings.update(entity_type, entity_id, **kwargs)
+        return f"Settings updated for {entity_type} {entity_id}."
+
 
 def _format_entity(entity: dict, entity_type: str) -> str:
     eid = entity.get("shortId", entity.get("id", "?"))

@@ -90,6 +90,51 @@ def register_worklog_tools(mcp: FastMCP):
         await tracker.worklog.delete(issue_key, worklog_id)
         return f"Worklog {worklog_id} deleted from {issue_key}."
 
+    @mcp.tool()
+    async def search_worklog(
+        ctx: Context,
+        created_by: str | None = None,
+        created_at_from: str | None = None,
+        created_at_to: str | None = None,
+    ) -> str:
+        """Search worklog entries across all issues.
+
+        Args:
+            created_by: Filter by author login
+            created_at_from: Start date (YYYY-MM-DD or ISO 8601)
+            created_at_to: End date (YYYY-MM-DD or ISO 8601)
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if created_by is not None:
+            kwargs["created_by"] = created_by
+        if created_at_from is not None:
+            kwargs["created_at_from"] = created_at_from
+        if created_at_to is not None:
+            kwargs["created_at_to"] = created_at_to
+
+        entries = await tracker.worklog.search(**kwargs)
+
+        if not entries:
+            return "No worklog entries found."
+
+        lines = [f"Worklog entries ({len(entries)}):\n"]
+        for entry in entries:
+            wid = entry.get("id", "?")
+            issue = entry.get("issue", {})
+            issue_key = issue.get("key", "?") if isinstance(issue, dict) else str(issue)
+            duration = entry.get("duration", "?")
+            start = entry.get("start", "")
+            comment = entry.get("comment", "")
+            author = entry.get("createdBy", {})
+            if isinstance(author, dict):
+                author = author.get("display", "?")
+            line = f"- [{wid}] {issue_key}: {duration} by {author} at {start}"
+            if comment:
+                line += f" — {comment[:100]}"
+            lines.append(line)
+        return "\n".join(lines)
+
 
 def _format_worklog(entry: dict, issue_key: str) -> str:
     wid = entry.get("id", "?")

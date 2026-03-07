@@ -23,6 +23,9 @@ from ya_tracker_mcp.tools.directories import register_directory_tools
 from ya_tracker_mcp.tools.automations import register_automation_tools
 from ya_tracker_mcp.tools.bulk import register_bulk_tools
 from ya_tracker_mcp.tools.imports import register_import_tools
+from ya_tracker_mcp.tools.filters import register_filter_tools
+from ya_tracker_mcp.tools.dashboards import register_dashboard_tools
+from ya_tracker_mcp.tools.external_links import register_external_link_tools
 from ya_tracker_mcp.resources.static import register_resources
 from ya_tracker_mcp.prompts.prompts import register_prompts
 
@@ -59,6 +62,9 @@ register_directory_tools(mcp)
 register_automation_tools(mcp)
 register_bulk_tools(mcp)
 register_import_tools(mcp)
+register_filter_tools(mcp)
+register_dashboard_tools(mcp)
+register_external_link_tools(mcp)
 register_resources(mcp)
 register_prompts(mcp)
 

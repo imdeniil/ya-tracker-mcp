@@ -11,6 +11,20 @@ def register_user_tools(mcp: FastMCP):
         return _format_user(user)
 
     @mcp.tool()
+    async def get_user(
+        ctx: Context,
+        user_id: str,
+    ) -> str:
+        """Get info about a specific user.
+
+        Args:
+            user_id: User login or UID
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        user = await tracker.users.get(user_id)
+        return _format_user(user)
+
+    @mcp.tool()
     async def list_users(
         ctx: Context,
         per_page: int | None = None,

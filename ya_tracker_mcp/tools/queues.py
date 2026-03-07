@@ -50,6 +50,191 @@ def register_queue_tools(mcp: FastMCP):
         queue = await tracker.queues.get(queue_key, expand=expand)
         return _format_queue(queue)
 
+    @mcp.tool()
+    async def create_queue(
+        ctx: Context,
+        key: str,
+        name: str,
+        lead: str,
+        default_type: str,
+        default_priority: str,
+        issue_types_config: list[dict],
+        description: str | None = None,
+    ) -> str:
+        """Create a new queue.
+
+        Args:
+            key: Queue key (e.g. "DEV")
+            name: Queue name
+            lead: Lead user login
+            default_type: Default issue type key
+            default_priority: Default priority key
+            issue_types_config: Issue types config (list of dicts with issueType and workflow keys)
+            description: Queue description
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if description is not None:
+            kwargs["description"] = description
+
+        queue = await tracker.queues.create(
+            key, name, lead, default_type, default_priority, issue_types_config, **kwargs
+        )
+        return _format_queue(queue)
+
+    @mcp.tool()
+    async def delete_queue(
+        ctx: Context,
+        queue_key: str,
+    ) -> str:
+        """Delete a queue.
+
+        Args:
+            queue_key: Queue key (e.g. "DEV")
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        await tracker.queues.delete(queue_key)
+        return f"Queue {queue_key} deleted."
+
+    @mcp.tool()
+    async def restore_queue(
+        ctx: Context,
+        queue_key: str,
+    ) -> str:
+        """Restore a previously deleted queue.
+
+        Args:
+            queue_key: Queue key (e.g. "DEV")
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        await tracker.queues.restore(queue_key)
+        return f"Queue {queue_key} restored."
+
+    @mcp.tool()
+    async def list_queue_versions(
+        ctx: Context,
+        queue_key: str,
+    ) -> str:
+        """List versions of a queue.
+
+        Args:
+            queue_key: Queue key (e.g. "DEV")
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        versions = await tracker.queues.versions.list(queue_key)
+
+        if not versions:
+            return f"No versions in queue {queue_key}."
+
+        lines = [f"Versions in {queue_key}:\n"]
+        for v in versions:
+            vid = v.get("id", "?")
+            name = v.get("name", "")
+            start = v.get("startDate", "")
+            due = v.get("dueDate", "")
+            released = v.get("released", False)
+            status = "released" if released else "active"
+            lines.append(f"- [{vid}] {name} ({start} — {due}) [{status}]")
+        return "\n".join(lines)
+
+    @mcp.tool()
+    async def create_queue_version(
+        ctx: Context,
+        queue_key: str,
+        name: str,
+        description: str | None = None,
+        start_date: str | None = None,
+        due_date: str | None = None,
+    ) -> str:
+        """Create a version in a queue.
+
+        Args:
+            queue_key: Queue key (e.g. "DEV")
+            name: Version name
+            description: Version description
+            start_date: Start date (YYYY-MM-DD)
+            due_date: Due date (YYYY-MM-DD)
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if description is not None:
+            kwargs["description"] = description
+        if start_date is not None:
+            kwargs["start_date"] = start_date
+        if due_date is not None:
+            kwargs["due_date"] = due_date
+
+        version = await tracker.queues.versions.create(queue_key, name, **kwargs)
+        vid = version.get("id", "?")
+        return f"Version created: [{vid}] {name} in queue {queue_key}"
+
+    @mcp.tool()
+    async def delete_queue_tag(
+        ctx: Context,
+        queue_key: str,
+        tag: str,
+    ) -> str:
+        """Delete a tag from a queue.
+
+        Args:
+            queue_key: Queue key (e.g. "DEV")
+            tag: Tag name to delete
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        await tracker.queues.tags.delete(queue_key, tag)
+        return f"Tag '{tag}' deleted from queue {queue_key}."
+
+    @mcp.tool()
+    async def get_queue_user_permissions(
+        ctx: Context,
+        queue_key: str,
+        user_id: str,
+    ) -> str:
+        """Get user permissions for a queue.
+
+        Args:
+            queue_key: Queue key (e.g. "DEV")
+            user_id: User login or UID
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        perms = await tracker.queues.permissions.get_user(queue_key, user_id)
+        return f"Permissions for {user_id} in {queue_key}:\n{perms}"
+
+    @mcp.tool()
+    async def update_queue_permissions(
+        ctx: Context,
+        queue_key: str,
+        create: dict | None = None,
+        write: dict | None = None,
+        read: dict | None = None,
+        grant: dict | None = None,
+    ) -> str:
+        """Update queue access permissions.
+
+        Args:
+            queue_key: Queue key (e.g. "DEV")
+            create: Create permission (e.g. {"users": {"add": ["uid1"]}})
+            write: Write permission
+            read: Read permission
+            grant: Grant permission
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if create is not None:
+            kwargs["create"] = create
+        if write is not None:
+            kwargs["write"] = write
+        if read is not None:
+            kwargs["read"] = read
+        if grant is not None:
+            kwargs["grant"] = grant
+
+        if not kwargs:
+            return "No permissions to update."
+
+        result = await tracker.queues.permissions.update(queue_key, **kwargs)
+        return f"Permissions updated for queue {queue_key}."
+
 
 def _format_queue(queue: dict) -> str:
     key = queue.get("key", "?")

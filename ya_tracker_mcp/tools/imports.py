@@ -124,3 +124,28 @@ def register_import_tools(mcp: FastMCP):
             issue_key, relationship, target, created_at, created_by
         )
         return f"Link '{relationship}' from {issue_key} to {target} imported."
+
+    @mcp.tool()
+    async def import_file(
+        ctx: Context,
+        issue_key: str,
+        filename: str,
+        created_at: str,
+        created_by: str,
+        file_data: str,
+    ) -> str:
+        """Import a file attachment with original timestamp and author.
+
+        Args:
+            issue_key: Target issue key (e.g. "DEV-123")
+            filename: File name
+            created_at: Original creation time (ISO 8601 with +0000 timezone)
+            created_by: Original author login
+            file_data: File content as text (for binary files use base64)
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        result = await tracker.imports.file(
+            issue_key, file_data.encode("utf-8"), filename, created_at, created_by
+        )
+        fid = result.get("id", "?") if isinstance(result, dict) else "?"
+        return f"File '{filename}' [{fid}] imported to {issue_key}."
