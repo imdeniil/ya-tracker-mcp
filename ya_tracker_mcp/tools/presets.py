@@ -7,9 +7,17 @@ PRESETS_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "presets.
 
 
 def _load_presets() -> dict:
+    if not os.path.exists(PRESETS_PATH):
+        return {}
     with open(PRESETS_PATH) as f:
         data = yaml.safe_load(f)
-    return data.get("presets", {})
+    return data.get("presets", {}) if data else {}
+
+
+def _save_presets(presets: dict):
+    os.makedirs(os.path.dirname(PRESETS_PATH), exist_ok=True)
+    with open(PRESETS_PATH, "w") as f:
+        yaml.dump({"presets": presets}, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
 
 
 def register_preset_tools(mcp: FastMCP):
@@ -125,3 +133,65 @@ def register_preset_tools(mcp: FastMCP):
 
         key = issue.get("key", "?")
         return f"Issue **{key}** created from preset '{preset_name}'.\nhttps://tracker.yandex.ru/{key}"
+
+    @mcp.tool()
+    async def add_preset(
+        ctx: Context,
+        preset_name: str,
+        name: str,
+        params: dict | None = None,
+        description_template: str | None = None,
+        rules: list[str] | None = None,
+        description: str | None = None,
+        notes: str | None = None,
+    ) -> str:
+        """Add or update a task preset.
+
+        Args:
+            preset_name: Preset key (e.g. "bug_report")
+            name: Human-readable preset name
+            params: Default issue params (e.g. {"type": "bug", "priority": "critical"})
+            description_template: Template with {input.field} placeholders
+            rules: List of rules for the AI assistant
+            description: Short description of the preset
+            notes: Additional notes
+        """
+        presets = _load_presets()
+
+        preset = {"name": name}
+        if description:
+            preset["description"] = description
+        if params:
+            preset["params"] = params
+        if description_template:
+            preset["description_template"] = description_template
+        if rules:
+            preset["rules"] = rules
+        if notes:
+            preset["notes"] = notes
+
+        action = "updated" if preset_name in presets else "added"
+        presets[preset_name] = preset
+        _save_presets(presets)
+
+        return f"Preset '{preset_name}' {action}. Total presets: {len(presets)}."
+
+    @mcp.tool()
+    async def remove_preset(
+        ctx: Context,
+        preset_name: str,
+    ) -> str:
+        """Remove a task preset.
+
+        Args:
+            preset_name: Preset key to remove (from list_presets)
+        """
+        presets = _load_presets()
+
+        if preset_name not in presets:
+            return f"Preset '{preset_name}' not found. Use list_presets to see available presets."
+
+        del presets[preset_name]
+        _save_presets(presets)
+
+        return f"Preset '{preset_name}' removed. Remaining presets: {len(presets)}."
