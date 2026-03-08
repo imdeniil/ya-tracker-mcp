@@ -53,7 +53,7 @@ def register_issue_tools(mcp: FastMCP):
         if parent is not None:
             kwargs["parent"] = parent
         if sprint is not None:
-            kwargs["sprint"] = sprint
+            kwargs["sprint"] = [{"id": int(sprint)}]
         if tags is not None:
             kwargs["tags"] = tags
         if project is not None:
@@ -141,7 +141,7 @@ def register_issue_tools(mcp: FastMCP):
         if parent is not None:
             kwargs["parent"] = parent
         if sprint is not None:
-            kwargs["sprint"] = sprint
+            kwargs["sprint"] = [{"id": int(sprint)}]
         if tags is not None:
             kwargs["tags"] = tags
         if project is not None:

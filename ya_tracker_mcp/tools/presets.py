@@ -121,7 +121,7 @@ def register_preset_tools(mcp: FastMCP):
         if "components" in params:
             kwargs["components"] = params.pop("components")
         if "sprint" in params:
-            kwargs["sprint"] = params.pop("sprint")
+            kwargs["sprint"] = [{"id": int(params.pop("sprint"))}]
 
         summary = input_values.get("summary", input_values.get("what", input_values.get("description", "")[:100]))
 
