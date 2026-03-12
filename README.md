@@ -63,9 +63,9 @@ You need an OAuth token and organization ID:
 ### Issues (7)
 | Tool | Description |
 |------|-------------|
-| `create_issue` | Create issue (queue, summary, type, priority, assignee...) |
+| `create_issue` | Create issue (queue, summary, type, priority, assignee, extra_fields for custom/local fields) |
 | `get_issue` | Get issue details with optional expand (transitions, attachments) |
-| `update_issue` | Update issue fields |
+| `update_issue` | Update issue fields (supports extra_fields for custom/local fields) |
 | `search_issues` | Search with query language or filters |
 | `count_issues` | Count matching issues |
 | `move_issue` | Move to another queue |
