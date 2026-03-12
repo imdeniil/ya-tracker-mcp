@@ -553,3 +553,78 @@ def register_directory_tools(mcp: FastMCP):
             kwargs["description"] = description
         result = await tracker.issues.fields.local.update(queue_key, field_key, **kwargs)
         return f"Local field updated: {field_key} in queue {queue_key}"
+
+    # --- Field categories ---
+
+    @mcp.tool()
+    async def list_field_categories(ctx: Context) -> str:
+        """List all field categories."""
+        tracker = ctx.lifespan_context["tracker"]
+        cats = await tracker.issues.fields.categories.list()
+        if not cats:
+            return "No field categories found."
+        lines = [f"Field categories ({len(cats)}):\n"]
+        for c in cats:
+            cid = c.get("id", "?")
+            name = c.get("name", "?")
+            version = c.get("version", "?")
+            lines.append(f"- **{cid}** — {name} (v{version})")
+        return "\n".join(lines)
+
+    @mcp.tool()
+    async def create_field_category(
+        ctx: Context,
+        name_en: str,
+        name_ru: str,
+        order: int | None = None,
+    ) -> str:
+        """Create a field category.
+
+        Args:
+            name_en: Category name in English
+            name_ru: Category name in Russian
+            order: Sort order (optional)
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if order is not None:
+            kwargs["order"] = order
+        result = await tracker.issues.fields.categories.create(
+            name={"en": name_en, "ru": name_ru}, **kwargs
+        )
+        cid = result.get("id", "?")
+        return f"Field category created: {cid} — {name_en} / {name_ru}"
+
+    @mcp.tool()
+    async def update_field_category(
+        ctx: Context,
+        category_id: str,
+        version: str,
+        name_en: str | None = None,
+        name_ru: str | None = None,
+        order: int | None = None,
+    ) -> str:
+        """Update a field category.
+
+        Args:
+            category_id: Category ID
+            version: Current version (for optimistic locking, from list_field_categories)
+            name_en: New English name
+            name_ru: New Russian name
+            order: New sort order
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        kwargs = {}
+        if name_en is not None or name_ru is not None:
+            name = {}
+            if name_en is not None:
+                name["en"] = name_en
+            if name_ru is not None:
+                name["ru"] = name_ru
+            kwargs["name"] = name
+        if order is not None:
+            kwargs["order"] = order
+        result = await tracker.issues.fields.categories.update(
+            category_id=category_id, version=version, **kwargs
+        )
+        return f"Field category updated: {category_id}"

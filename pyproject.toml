@@ -1,6 +1,6 @@
 [project]
 name = "ya-tracker-mcp"
-version = "0.2.2"
+version = "0.3.0"
 description = "MCP server for Yandex Tracker API — issues, projects, boards, sprints, worklog and more"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "fastmcp>=2.0.0",
-    "YaTrackerApi>=2.0.0",
+    "YaTrackerApi>=2.3.0",
     "pyyaml>=6.0",
 ]
 
