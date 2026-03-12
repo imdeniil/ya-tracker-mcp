@@ -1,6 +1,6 @@
 # ya-tracker-mcp
 
-MCP server for [Yandex Tracker](https://tracker.yandex.ru/) API. Provides 140 tools for managing issues, projects, boards, sprints, worklog and more through the [Model Context Protocol](https://modelcontextprotocol.io/).
+MCP server for [Yandex Tracker](https://tracker.yandex.ru/) API. Provides 145 tools for managing issues, projects, boards, sprints, worklog and more through the [Model Context Protocol](https://modelcontextprotocol.io/).
 
 Built with [FastMCP](https://gofastmcp.com) and [YaTrackerApi](https://pypi.org/project/YaTrackerApi/).
 
@@ -58,7 +58,7 @@ You need an OAuth token and organization ID:
 1. **OAuth token** - get at [oauth.yandex.ru](https://oauth.yandex.ru/) with Tracker access
 2. **Organization ID** - find in Tracker admin settings or via API `GET /v3/myself`
 
-## Tools (140)
+## Tools (145)
 
 ### Issues (7)
 | Tool | Description |
@@ -180,7 +180,7 @@ You need an OAuth token and organization ID:
 | `get_user` | Get specific user info |
 | `list_users` | Organization users |
 
-### Directories — Reference Data (24)
+### Directories — Reference Data (27)
 | Tool | Description |
 |------|-------------|
 | `list_issue_types` | All issue types |
@@ -207,6 +207,9 @@ You need an OAuth token and organization ID:
 | `list_components` | All components |
 | `create_component` | Create component |
 | `update_component` | Update component |
+| `list_field_categories` | List field categories |
+| `create_field_category` | Create field category (bilingual name) |
+| `update_field_category` | Update field category |
 
 ### Automations (15)
 | Tool | Description |
@@ -270,12 +273,14 @@ You need an OAuth token and organization ID:
 | `issue_overview` | Full issue summary (status, links, comments, checklist, worklog) |
 | `queue_overview` | Queue summary (open count, top priority issues) |
 
-### Presets (3)
+### Presets (5)
 | Tool | Description |
 |------|-------------|
 | `list_presets` | Available task presets |
 | `get_preset` | Preset details (params, template, rules) |
 | `create_from_preset` | Create issue from preset |
+| `add_preset` | Add or update a preset at runtime |
+| `remove_preset` | Remove a preset |
 
 ### Team Directory (3)
 | Tool | Description |
@@ -308,7 +313,7 @@ You need an OAuth token and organization ID:
 
 ### Task Presets
 
-Edit `config/presets.yaml` to define task templates:
+Define presets in `config/presets.yaml` or manage at runtime with `add_preset` / `remove_preset`:
 
 ```yaml
 presets:
