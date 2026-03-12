@@ -20,6 +20,7 @@ def register_issue_tools(mcp: FastMCP):
         deadline: str | None = None,
         story_points: float | None = None,
         original_estimation: str | None = None,
+        extra_fields: dict | None = None,
     ) -> str:
         """Create a new issue in Yandex Tracker.
 
@@ -38,6 +39,7 @@ def register_issue_tools(mcp: FastMCP):
             deadline: Deadline date (YYYY-MM-DD)
             story_points: Story points estimate
             original_estimation: Original estimation in ISO 8601 (e.g. "PT2H", "P1D")
+            extra_fields: Additional/custom/local fields as dict (e.g. {"coAssignees": ["user1"], "myCustomField": "value"})
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -66,6 +68,8 @@ def register_issue_tools(mcp: FastMCP):
             kwargs["story_points"] = story_points
         if original_estimation is not None:
             kwargs["original_estimation"] = original_estimation
+        if extra_fields is not None:
+            kwargs.update(extra_fields)
 
         issue = await tracker.issues.create(
             summary=summary,
@@ -107,6 +111,7 @@ def register_issue_tools(mcp: FastMCP):
         followers: list[str] | None = None,
         deadline: str | None = None,
         story_points: float | None = None,
+        extra_fields: dict | None = None,
     ) -> str:
         """Update an existing issue.
 
@@ -124,6 +129,7 @@ def register_issue_tools(mcp: FastMCP):
             followers: Replace all followers
             deadline: Deadline (YYYY-MM-DD)
             story_points: Story points
+            extra_fields: Additional/custom/local fields as dict (e.g. {"coAssignees": ["user1"], "myCustomField": "value"})
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -152,6 +158,8 @@ def register_issue_tools(mcp: FastMCP):
             kwargs["deadline"] = deadline
         if story_points is not None:
             kwargs["story_points"] = story_points
+        if extra_fields is not None:
+            kwargs.update(extra_fields)
 
         issue = await tracker.issues.update(issue_key, **kwargs)
         return _format_issue(issue)
