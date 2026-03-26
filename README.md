@@ -212,7 +212,8 @@ You need an OAuth token and organization ID:
 | `create_local_field` | Create local field |
 | `update_local_field` | Update local field |
 | `list_queue_tags` | Queue tags (cached) |
-| `list_components` | All components (cached) |
+| `list_components` | All components (cached, supports `fields` param) |
+| `get_component` | Get component details by ID |
 | `create_component` | Create component (invalidates cache) |
 | `update_component` | Update component (invalidates cache) |
 | `list_field_categories` | List field categories (cached) |

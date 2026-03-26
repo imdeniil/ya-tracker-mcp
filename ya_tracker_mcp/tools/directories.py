@@ -136,8 +136,15 @@ def register_directory_tools(mcp: FastMCP):
         return f"Tags in {queue_key}: {', '.join(tags)}"
 
     @mcp.tool()
-    async def list_components(ctx: Context) -> str:
-        """List all components in the organization."""
+    async def list_components(
+        ctx: Context,
+        fields: list[str] | None = None,
+    ) -> str:
+        """List all components in the organization.
+
+        Args:
+            fields: Optional list of additional fields to show (e.g. ["description", "assignAuto"])
+        """
         tracker = ctx.lifespan_context["tracker"]
         
         components = await manager.get("components", tracker.components.list)
@@ -155,7 +162,61 @@ def register_directory_tools(mcp: FastMCP):
             lead = c.get("lead", {})
             if isinstance(lead, dict):
                 lead = lead.get("display", "?")
-            lines.append(f"- [{cid}] **{name}** (queue: {queue}, lead: {lead})")
+            
+            info = f"- [{cid}] **{name}** (queue: {queue}, lead: {lead})"
+            
+            if fields:
+                extra = []
+                for f in fields:
+                    if f in c and f not in ["id", "name", "queue", "lead"]:
+                        val = c[f]
+                        if isinstance(val, dict):
+                            val = val.get("display", val.get("name", str(val)))
+                        extra.append(f"{f}: {val}")
+                if extra:
+                    info += f" | {', '.join(extra)}"
+            
+            lines.append(info)
+        return "\n".join(lines)
+
+    @mcp.tool()
+    async def get_component(
+        ctx: Context,
+        component_id: int,
+    ) -> str:
+        """Get detailed information about a specific component by ID.
+
+        Args:
+            component_id: Numerical ID of the component
+        """
+        tracker = ctx.lifespan_context["tracker"]
+        components = await manager.get("components", tracker.components.list)
+        
+        # Search in cache
+        component = next((c for c in components if str(c.get("id")) == str(component_id)), None)
+        
+        if not component:
+            # Try to force refresh cache once
+            components = await manager.get("components", tracker.components.list, force=True)
+            component = next((c for c in components if str(c.get("id")) == str(component_id)), None)
+            
+        if not component:
+            return f"Component with ID {component_id} not found."
+
+        name = component.get("name", "?")
+        lines = [f"### Component: {name} [{component_id}]"]
+        
+        # Format all available fields
+        for k, v in component.items():
+            if k == "name" or k == "id":
+                continue
+            
+            display_val = v
+            if isinstance(v, dict):
+                display_val = v.get("display", v.get("name", v.get("key", str(v))))
+            
+            lines.append(f"**{k}**: {display_val}")
+            
         return "\n".join(lines)
 
     @mcp.tool()
@@ -259,7 +320,7 @@ def register_directory_tools(mcp: FastMCP):
         """List all field categories."""
         tracker = ctx.lifespan_context["tracker"]
         
-        categories = await manager.get("field_categories", tracker.issues.fields.list_categories)
+        categories = await manager.get("field_categories", tracker.issues.fields.categories.list)
 
         if not categories:
             return "No field categories found."
@@ -313,7 +374,7 @@ def register_directory_tools(mcp: FastMCP):
             "priorities": tracker.issues.priorities.list,
             "resolutions": tracker.issues.resolutions.list,
             "global_fields": tracker.issues.fields.list,
-            "field_categories": tracker.issues.fields.list_categories,
+            "field_categories": tracker.issues.fields.categories.list,
             "components": tracker.components.list,
             "queues": tracker.queues.list,
             "users": tracker.users.list,
@@ -350,7 +411,7 @@ def register_directory_tools(mcp: FastMCP):
             "priorities": tracker.issues.priorities.list,
             "resolutions": tracker.issues.resolutions.list,
             "global_fields": tracker.issues.fields.list,
-            "field_categories": tracker.issues.fields.list_categories,
+            "field_categories": tracker.issues.fields.categories.list,
             "components": tracker.components.list,
             "queues": tracker.queues.list,
             "users": tracker.users.list,
