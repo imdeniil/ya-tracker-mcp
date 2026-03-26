@@ -122,7 +122,7 @@ You need an OAuth token and organization ID:
 ### Boards & Sprints (12)
 | Tool | Description |
 |------|-------------|
-| `list_boards` | List all boards (cached) |
+| `list_boards` | All boards (cached, supports `fields`) |
 | `get_board` | Board details |
 | `create_board` | Create board (invalidates cache) |
 | `update_board` | Update board settings (invalidates cache) |
@@ -131,7 +131,7 @@ You need an OAuth token and organization ID:
 | `create_board_column` | Create column |
 | `update_board_column` | Update column |
 | `delete_board_column` | Delete column |
-| `list_sprints` | Board sprints (cached) |
+| `list_sprints` | Board sprints (cached, supports `fields`) |
 | `get_sprint` | Sprint details |
 | `create_sprint` | Create sprint (invalidates cache) |
 
@@ -162,7 +162,7 @@ You need an OAuth token and organization ID:
 ### Queues (10)
 | Tool | Description |
 |------|-------------|
-| `list_queues` | List all queues (cached) |
+| `list_queues` | All queues (cached, supports `fields`) |
 | `get_queue` | Queue details (expand: components, versions) |
 | `create_queue` | Create queue (invalidates cache) |
 | `delete_queue` | Delete queue (invalidates cache) |
@@ -178,7 +178,7 @@ You need an OAuth token and organization ID:
 |------|-------------|
 | `get_myself` | Current user info |
 | `get_user` | Get specific user info |
-| `list_users` | Organization users (cached) |
+| `list_users` | Organization users (cached, supports `fields`) |
 
 ### Cache Management (4)
 | Tool | Description |
@@ -188,9 +188,9 @@ You need an OAuth token and organization ID:
 | `sync_all_directories` | Force sync all basic directories from API |
 | `configure_cache` | Configure TTL for a specific directory cache |
 
-> **Universal List Parameters:** Most `list_*` tools (Queues, Components, Boards, Sprints, Users, Fields) support:
-> - `fields: list[str]` — Additional fields to show. Use `["all"]` for full API response.
-> - `use_cache: bool` — Set to `False` to bypass local cache and fetch fresh data.
+> **Universal List Parameters:** Most `list_*` tools (Queues, Components, Boards, Sprints, Users, Fields) now support:
+> - `fields: list[str]` — Additional fields to show. Use `["all"]` to see every field available in the API.
+> - `use_cache: bool` — Set to `False` to bypass local cache and fetch fresh data from Yandex Tracker.
 
 ### Directories — Reference Data (27)
 | Tool | Description |
@@ -211,13 +211,13 @@ You need an OAuth token and organization ID:
 | `get_field` | Get field details |
 | `create_field` | Create global field |
 | `update_field` | Update global field |
-| `list_queue_fields` | Queue fields (cached) |
+| `list_queue_fields` | Queue fields (cached, supports `fields`) |
 | `get_local_field` | Get local field |
 | `create_local_field` | Create local field |
 | `update_local_field` | Update local field |
 | `list_queue_tags` | Queue tags (cached) |
-| `list_components` | All components (cached, supports `fields` param) |
-| `get_component` | Get component details by ID |
+| `list_components` | All components (cached, supports `fields`) |
+| `get_component` | Get component details by ID (uses cache) |
 | `create_component` | Create component (invalidates cache) |
 | `update_component` | Update component (invalidates cache) |
 | `list_field_categories` | List field categories (cached) |
