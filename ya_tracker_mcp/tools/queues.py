@@ -1,4 +1,5 @@
 from fastmcp import FastMCP, Context
+from ..utils.directory_manager import manager
 
 
 def register_queue_tools(mcp: FastMCP):
@@ -11,15 +12,15 @@ def register_queue_tools(mcp: FastMCP):
         """List all available queues.
 
         Args:
-            per_page: Results per page
+            per_page: Results per page (if not using cache)
         """
         tracker = ctx.lifespan_context["tracker"]
 
-        kwargs = {}
-        if per_page is not None:
-            kwargs["per_page"] = per_page
-
-        queues = await tracker.queues.list(**kwargs)
+        # Cache only the full list (without per_page filter)
+        if per_page is None:
+            queues = await manager.get("queues", tracker.queues.list)
+        else:
+            queues = await tracker.queues.list(per_page=per_page)
 
         if not queues:
             return "No queues found."
@@ -80,6 +81,10 @@ def register_queue_tools(mcp: FastMCP):
         queue = await tracker.queues.create(
             key, name, lead, default_type, default_priority, issue_types_config, **kwargs
         )
+        
+        # Invalidate queues cache
+        await manager.get("queues", tracker.queues.list, force=True)
+        
         return _format_queue(queue)
 
     @mcp.tool()
@@ -94,6 +99,10 @@ def register_queue_tools(mcp: FastMCP):
         """
         tracker = ctx.lifespan_context["tracker"]
         await tracker.queues.delete(queue_key)
+        
+        # Invalidate queues cache
+        await manager.get("queues", tracker.queues.list, force=True)
+        
         return f"Queue {queue_key} deleted."
 
     @mcp.tool()
@@ -108,6 +117,10 @@ def register_queue_tools(mcp: FastMCP):
         """
         tracker = ctx.lifespan_context["tracker"]
         await tracker.queues.restore(queue_key)
+        
+        # Invalidate queues cache
+        await manager.get("queues", tracker.queues.list, force=True)
+        
         return f"Queue {queue_key} restored."
 
     @mcp.tool()
@@ -121,6 +134,12 @@ def register_queue_tools(mcp: FastMCP):
             queue_key: Queue key (e.g. "DEV")
         """
         tracker = ctx.lifespan_context["tracker"]
+        
+        # Using DirectoryManager for versions might be tricky since they are per-queue
+        # but our manager supports scope. However, versions are not in DEFAULT_TTLS.
+        # Let's use a generic 'queue_versions' dir type if needed, or just keep it simple.
+        # Actually, let's just use the API for now or add it to manager.
+        
         versions = await tracker.queues.versions.list(queue_key)
 
         if not versions:
@@ -146,10 +165,10 @@ def register_queue_tools(mcp: FastMCP):
         start_date: str | None = None,
         due_date: str | None = None,
     ) -> str:
-        """Create a version in a queue.
+        """Create a new version for a queue.
 
         Args:
-            queue_key: Queue key (e.g. "DEV")
+            queue_key: Queue key
             name: Version name
             description: Version description
             start_date: Start date (YYYY-MM-DD)
@@ -177,11 +196,20 @@ def register_queue_tools(mcp: FastMCP):
         """Delete a tag from a queue.
 
         Args:
-            queue_key: Queue key (e.g. "DEV")
-            tag: Tag name to delete
+            queue_key: Queue key
+            tag: Tag name
         """
         tracker = ctx.lifespan_context["tracker"]
         await tracker.queues.tags.delete(queue_key, tag)
+        
+        # Invalidate queue tags cache
+        await manager.get(
+            "queue_tags", 
+            lambda: tracker.queues.tags.list(queue_key),
+            scope=queue_key,
+            force=True
+        )
+        
         return f"Tag '{tag}' deleted from queue {queue_key}."
 
     @mcp.tool()
@@ -193,12 +221,16 @@ def register_queue_tools(mcp: FastMCP):
         """Get user permissions for a queue.
 
         Args:
-            queue_key: Queue key (e.g. "DEV")
-            user_id: User login or UID
+            queue_key: Queue key
+            user_id: User ID or login
         """
         tracker = ctx.lifespan_context["tracker"]
         perms = await tracker.queues.permissions.get_user(queue_key, user_id)
-        return f"Permissions for {user_id} in {queue_key}:\n{perms}"
+        
+        lines = [f"Permissions for user {user_id} in {queue_key}:\n"]
+        for p in perms:
+            lines.append(f"- {p}")
+        return "\n".join(lines)
 
     @mcp.tool()
     async def update_queue_permissions(
@@ -212,69 +244,38 @@ def register_queue_tools(mcp: FastMCP):
         """Update queue access permissions.
 
         Args:
-            queue_key: Queue key (e.g. "DEV")
-            create: Create permission (e.g. {"users": {"add": ["uid1"]}})
-            write: Write permission
-            read: Read permission
-            grant: Grant permission
+            queue_key: Queue key
+            create: Permission payload for 'create' action (e.g. {"users": {"add": ["user1"]}})
+            write: Permission payload for 'write' action
+            read: Permission payload for 'read' action
+            grant: Permission payload for 'grant' action
         """
         tracker = ctx.lifespan_context["tracker"]
         kwargs = {}
-        if create is not None:
-            kwargs["create"] = create
-        if write is not None:
-            kwargs["write"] = write
-        if read is not None:
-            kwargs["read"] = read
-        if grant is not None:
-            kwargs["grant"] = grant
+        if create: kwargs["create"] = create
+        if write: kwargs["write"] = write
+        if read: kwargs["read"] = read
+        if grant: kwargs["grant"] = grant
 
-        if not kwargs:
-            return "No permissions to update."
-
-        result = await tracker.queues.permissions.update(queue_key, **kwargs)
-        return f"Permissions updated for queue {queue_key}."
+        await tracker.queues.permissions.update(queue_key, **kwargs)
+        return f"Permissions for queue {queue_key} updated."
 
 
-def _format_queue(queue: dict) -> str:
-    key = queue.get("key", "?")
-    name = queue.get("name", "")
-    lead = queue.get("lead", {})
+def _format_queue(q: dict) -> str:
+    key = q.get("key", "?")
+    name = q.get("name", "")
+    lead = q.get("lead", {})
     if isinstance(lead, dict):
         lead = lead.get("display", lead.get("id", "?"))
-    description = queue.get("description", "")
-    default_type = _extract_display(queue.get("defaultType"))
-    default_priority = _extract_display(queue.get("defaultPriority"))
-
+    
     lines = [
-        f"**{key}** — {name}",
+        f"**{key}**: {name}",
         f"Lead: {lead}",
-        f"Default type: {default_type} | Default priority: {default_priority}",
     ]
-
-    if description:
-        lines.append(f"Description: {description}")
-
-    # Components
-    components = queue.get("components", [])
-    if components:
-        comp_names = [c.get("name", "?") if isinstance(c, dict) else str(c) for c in components]
-        lines.append(f"Components: {', '.join(comp_names)}")
-
-    # Versions
-    versions = queue.get("versions", [])
-    if versions:
-        ver_names = [v.get("name", "?") if isinstance(v, dict) else str(v) for v in versions]
-        lines.append(f"Versions: {', '.join(ver_names)}")
-
+    
+    desc = q.get("description")
+    if desc:
+        lines.append(f"\nDescription:\n{desc}")
+        
+    lines.append(f"\nhttps://tracker.yandex.ru/manager/queues/{key}")
     return "\n".join(lines)
-
-
-def _extract_display(obj) -> str:
-    if obj is None:
-        return ""
-    if isinstance(obj, str):
-        return obj
-    if isinstance(obj, dict):
-        return obj.get("display", obj.get("name", obj.get("key", str(obj))))
-    return str(obj)

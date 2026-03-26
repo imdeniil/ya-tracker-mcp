@@ -1,4 +1,5 @@
 from fastmcp import FastMCP, Context
+from ..utils.directory_manager import manager
 
 
 def register_board_tools(mcp: FastMCP):
@@ -7,7 +8,8 @@ def register_board_tools(mcp: FastMCP):
     async def list_boards(ctx: Context) -> str:
         """List all boards."""
         tracker = ctx.lifespan_context["tracker"]
-        boards = await tracker.boards.list()
+        
+        boards = await manager.get("boards", tracker.boards.list)
 
         if not boards:
             return "No boards found."
@@ -44,7 +46,12 @@ def register_board_tools(mcp: FastMCP):
             board_id: Board ID
         """
         tracker = ctx.lifespan_context["tracker"]
-        sprints = await tracker.boards.sprints.list(board_id)
+        
+        sprints = await manager.get(
+            "sprints",
+            lambda: tracker.boards.sprints.list(board_id),
+            scope=str(board_id)
+        )
 
         if not sprints:
             return f"No sprints for board {board_id}."
@@ -81,6 +88,15 @@ def register_board_tools(mcp: FastMCP):
         )
 
         sid = sprint.get("id", "?")
+        
+        # Invalidate sprints cache for this board
+        await manager.get(
+            "sprints",
+            lambda: tracker.boards.sprints.list(board_id),
+            scope=str(board_id),
+            force=True
+        )
+        
         return f"Sprint [{sid}] '{name}' created ({start_date} — {end_date})."
 
     @mcp.tool()
@@ -133,16 +149,16 @@ def register_board_tools(mcp: FastMCP):
         """
         tracker = ctx.lifespan_context["tracker"]
         kwargs = {}
-        if columns is not None:
-            kwargs["columns"] = columns
-        if sprints_available is not None:
-            kwargs["sprints_available"] = sprints_available
-        if backlog_available is not None:
-            kwargs["backlog_available"] = backlog_available
-        if board_permissions_template is not None:
-            kwargs["board_permissions_template"] = board_permissions_template
+        if columns: kwargs["columns"] = columns
+        if sprints_available is not None: kwargs["sprints_available"] = sprints_available
+        if backlog_available is not None: kwargs["backlog_available"] = backlog_available
+        if board_permissions_template: kwargs["board_permissions_template"] = board_permissions_template
 
-        board = await tracker.boards.create(name, **kwargs)
+        board = await tracker.boards.create(name=name, **kwargs)
+        
+        # Invalidate boards cache
+        await manager.get("boards", tracker.boards.list, force=True)
+        
         return _format_board(board)
 
     @mcp.tool()
@@ -150,35 +166,32 @@ def register_board_tools(mcp: FastMCP):
         ctx: Context,
         board_id: int,
         name: str | None = None,
-        columns: list[dict] | None = None,
         sprints_available: bool | None = None,
         backlog_available: bool | None = None,
     ) -> str:
-        """Update board settings.
+        """Update an existing board.
 
         Args:
             board_id: Board ID
             name: New board name
-            columns: New columns config
-            sprints_available: Enable/disable sprints
-            backlog_available: Enable/disable backlog
+            sprints_available: Enable sprints
+            backlog_available: Enable backlog
         """
         tracker = ctx.lifespan_context["tracker"]
         kwargs = {}
-        if name is not None:
-            kwargs["name"] = name
-        if columns is not None:
-            kwargs["columns"] = columns
-        if sprints_available is not None:
-            kwargs["sprints_available"] = sprints_available
-        if backlog_available is not None:
-            kwargs["backlog_available"] = backlog_available
+        if name: kwargs["name"] = name
+        if sprints_available is not None: kwargs["sprints_available"] = sprints_available
+        if backlog_available is not None: kwargs["backlog_available"] = backlog_available
 
         if not kwargs:
             return "No fields to update."
 
         board = await tracker.boards.update(board_id, **kwargs)
-        return _format_board(board)
+        
+        # Invalidate boards cache
+        await manager.get("boards", tracker.boards.list, force=True)
+        
+        return f"Board [{board_id}] updated."
 
     @mcp.tool()
     async def delete_board(
@@ -192,114 +205,23 @@ def register_board_tools(mcp: FastMCP):
         """
         tracker = ctx.lifespan_context["tracker"]
         await tracker.boards.delete(board_id)
-        return f"Board {board_id} deleted."
-
-    @mcp.tool()
-    async def get_sprint(
-        ctx: Context,
-        sprint_id: int,
-    ) -> str:
-        """Get sprint details.
-
-        Args:
-            sprint_id: Sprint ID
-        """
-        tracker = ctx.lifespan_context["tracker"]
-        sprint = await tracker.boards.sprints.get(sprint_id)
-        sid = sprint.get("id", "?")
-        name = sprint.get("name", "")
-        status = sprint.get("status", "")
-        start = sprint.get("startDate", "")
-        end = sprint.get("endDate", "")
-        board = sprint.get("board", {})
-        board_id = board.get("id", "?") if isinstance(board, dict) else board
-        return f"**Sprint [{sid}]**: {name}\nStatus: {status}\nPeriod: {start} — {end}\nBoard: {board_id}"
-
-    @mcp.tool()
-    async def create_board_column(
-        ctx: Context,
-        board_id: int,
-        name: str,
-        statuses: list[str],
-    ) -> str:
-        """Create a column on a board.
-
-        Args:
-            board_id: Board ID
-            name: Column name
-            statuses: List of status keys for this column
-        """
-        tracker = ctx.lifespan_context["tracker"]
-        column = await tracker.boards.columns.create(board_id, name, statuses)
-        cid = column.get("id", "?")
-        return f"Column created: [{cid}] {name} on board {board_id}"
-
-    @mcp.tool()
-    async def update_board_column(
-        ctx: Context,
-        board_id: int,
-        column_id: int,
-        name: str | None = None,
-        statuses: list[str] | None = None,
-    ) -> str:
-        """Update a board column.
-
-        Args:
-            board_id: Board ID
-            column_id: Column ID
-            name: New column name
-            statuses: New list of status keys
-        """
-        tracker = ctx.lifespan_context["tracker"]
-        kwargs = {}
-        if name is not None:
-            kwargs["name"] = name
-        if statuses is not None:
-            kwargs["statuses"] = statuses
-
-        if not kwargs:
-            return "No fields to update."
-
-        column = await tracker.boards.columns.update(board_id, column_id, **kwargs)
-        return f"Column [{column_id}] updated on board {board_id}."
-
-    @mcp.tool()
-    async def delete_board_column(
-        ctx: Context,
-        board_id: int,
-        column_id: int,
-    ) -> str:
-        """Delete a column from a board.
-
-        Args:
-            board_id: Board ID
-            column_id: Column ID
-        """
-        tracker = ctx.lifespan_context["tracker"]
-        await tracker.boards.columns.delete(board_id, column_id)
-        return f"Column [{column_id}] deleted from board {board_id}."
+        
+        # Invalidate boards cache
+        await manager.get("boards", tracker.boards.list, force=True)
+        
+        return f"Board [{board_id}] deleted."
 
 
-def _format_board(board: dict) -> str:
-    bid = board.get("id", "?")
-    name = board.get("name", "")
-    owner = board.get("owner", {})
-    if isinstance(owner, dict):
-        owner = owner.get("display", owner.get("id", "?"))
-
-    lines = [
-        f"**Board [{bid}]**: {name}",
-        f"Owner: {owner}",
-    ]
-
-    if board.get("sprintsAvailable"):
-        lines.append("Sprints: enabled")
-    if board.get("backlogAvailable"):
-        lines.append("Backlog: enabled")
-
-    columns = board.get("columns", [])
-    if columns:
-        col_names = [c.get("name", "?") if isinstance(c, dict) else str(c) for c in columns]
-        lines.append(f"Columns: {' -> '.join(col_names)}")
-
+def _format_board(b: dict) -> str:
+    bid = b.get("id", "?")
+    name = b.get("name", "")
+    lines = [f"**Board [{bid}]**: {name}"]
+    
+    # Optional fields
+    if "sprintsAvailable" in b:
+        lines.append(f"Sprints enabled: {b['sprintsAvailable']}")
+    if "backlogAvailable" in b:
+        lines.append(f"Backlog enabled: {b['backlogAvailable']}")
+        
+    lines.append(f"\nhttps://tracker.yandex.ru/manager/boards/{bid}")
     return "\n".join(lines)

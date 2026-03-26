@@ -1,4 +1,5 @@
 from fastmcp import FastMCP, Context
+from ..utils.directory_manager import manager
 
 
 def register_user_tools(mcp: FastMCP):
@@ -32,15 +33,14 @@ def register_user_tools(mcp: FastMCP):
         """List organization users.
 
         Args:
-            per_page: Results per page
+            per_page: Results per page (if not using cache)
         """
         tracker = ctx.lifespan_context["tracker"]
 
-        kwargs = {}
-        if per_page is not None:
-            kwargs["per_page"] = per_page
-
-        users = await tracker.users.list(**kwargs)
+        if per_page is None:
+            users = await manager.get("users", tracker.users.list)
+        else:
+            users = await tracker.users.list(per_page=per_page)
 
         if not users:
             return "No users found."
