@@ -178,7 +178,7 @@ def register_directory_tools(mcp: FastMCP):
         """List all components in the organization.
 
         Args:
-            fields: Optional list of additional fields to show (e.g. ["description", "assignAuto"])
+            fields: Optional list of additional fields to show (e.g. ["description", "assignAuto"]). Use ["all"] to show all fields.
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
@@ -203,11 +203,15 @@ def register_directory_tools(mcp: FastMCP):
             
             if fields:
                 extra = []
-                for f in fields:
+                fields_to_show = fields
+                if "all" in fields:
+                    fields_to_show = [k for k in c.keys() if k not in ["id", "name", "queue", "lead", "self"]]
+                
+                for f in fields_to_show:
                     if f in c and f not in ["id", "name", "queue", "lead"]:
                         val = c[f]
                         if isinstance(val, dict):
-                            val = val.get("display", val.get("name", str(val)))
+                            val = val.get("display", val.get("name", val.get("key", str(val))))
                         extra.append(f"{f}: {val}")
                 if extra:
                     info += f" | {', '.join(extra)}"
