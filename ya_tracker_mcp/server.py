@@ -32,6 +32,9 @@ from ya_tracker_mcp.prompts.prompts import register_prompts
 
 @asynccontextmanager
 async def lifespan(mcp: FastMCP) -> AsyncIterator[dict]:
+    from ya_tracker_mcp import __version__
+    print(f"Starting ya-tracker-mcp v{__version__}")
+    
     token = os.environ.get("YA_TRACKER_TOKEN") or os.environ["TRACKER_API_KEY"]
     org_id = os.environ.get("YA_TRACKER_ORG_ID") or os.environ["TRACKER_ORG_ID"]
     async with YandexTrackerClient(oauth_token=token, org_id=org_id) as client:
