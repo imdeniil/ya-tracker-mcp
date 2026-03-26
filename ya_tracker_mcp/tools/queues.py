@@ -1,5 +1,6 @@
 from fastmcp import FastMCP, Context
 from ..utils.directory_manager import manager
+from ..utils.formatters import format_mcp_list
 
 
 def register_queue_tools(mcp: FastMCP):
@@ -7,12 +8,14 @@ def register_queue_tools(mcp: FastMCP):
     @mcp.tool()
     async def list_queues(
         ctx: Context,
+        fields: list[str] | None = None,
         per_page: int | None = None,
         use_cache: bool = True,
     ) -> str:
         """List all available queues.
 
         Args:
+            fields: Optional list of additional fields (e.g. ["description", "issueTypesConfig"])
             per_page: Results per page (if not using cache)
             use_cache: Whether to use local cache (default: True). Note: per_page is ignored if using cache.
         """
@@ -24,18 +27,13 @@ def register_queue_tools(mcp: FastMCP):
         else:
             queues = await tracker.queues.list(per_page=per_page)
 
-        if not queues:
-            return "No queues found."
-
-        lines = [f"Queues ({len(queues)}):\n"]
-        for q in queues:
-            key = q.get("key", "?")
-            name = q.get("name", "")
-            lead = q.get("lead", {})
-            if isinstance(lead, dict):
-                lead = lead.get("display", lead.get("id", "?"))
-            lines.append(f"- **{key}** — {name} (lead: {lead})")
-        return "\n".join(lines)
+        return format_mcp_list(
+            queues, "Queues",
+            basic_fields=["lead"],
+            extra_fields=fields,
+            key_field="key",
+            template="- **{key}** — {name} ({basics})"
+        )
 
     @mcp.tool()
     async def get_queue(

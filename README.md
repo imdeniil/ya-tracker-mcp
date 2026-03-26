@@ -188,7 +188,9 @@ You need an OAuth token and organization ID:
 | `sync_all_directories` | Force sync all basic directories from API |
 | `configure_cache` | Configure TTL for a specific directory cache |
 
-> **Tip:** Most `list_*` tools now support a `use_cache: bool` parameter (default: `True`). Set it to `False` to force a fresh fetch from the API.
+> **Universal List Parameters:** Most `list_*` tools (Queues, Components, Boards, Sprints, Users, Fields) support:
+> - `fields: list[str]` — Additional fields to show. Use `["all"]` for full API response.
+> - `use_cache: bool` — Set to `False` to bypass local cache and fetch fresh data.
 
 ### Directories — Reference Data (27)
 | Tool | Description |

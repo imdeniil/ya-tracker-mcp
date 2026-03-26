@@ -1,5 +1,6 @@
 from fastmcp import FastMCP, Context
 from ..utils.directory_manager import manager
+from ..utils.formatters import format_mcp_list
 
 
 def register_user_tools(mcp: FastMCP):
@@ -28,12 +29,14 @@ def register_user_tools(mcp: FastMCP):
     @mcp.tool()
     async def list_users(
         ctx: Context,
+        fields: list[str] | None = None,
         per_page: int | None = None,
         use_cache: bool = True,
     ) -> str:
         """List organization users.
 
         Args:
+            fields: Optional list of additional fields (e.g. ["uid", "dismissed"])
             per_page: Results per page (if not using cache)
             use_cache: Whether to use local cache (default: True). Note: per_page is ignored if using cache.
         """
@@ -44,13 +47,14 @@ def register_user_tools(mcp: FastMCP):
         else:
             users = await tracker.users.list(per_page=per_page)
 
-        if not users:
-            return "No users found."
-
-        lines = [f"Users ({len(users)}):\n"]
-        for u in users:
-            lines.append(_format_user_short(u))
-        return "\n".join(lines)
+        return format_mcp_list(
+            users, "Users",
+            basic_fields=["login", "email"],
+            extra_fields=fields,
+            key_field="login",
+            name_field="display",
+            template="- **{name}** (@{key}) | {basics}"
+        )
 
 
 def _format_user(user: dict) -> str:

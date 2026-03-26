@@ -1,5 +1,6 @@
 from fastmcp import FastMCP, Context
 from ..utils.directory_manager import manager
+from ..utils.formatters import format_mcp_list
 
 
 def register_board_tools(mcp: FastMCP):
@@ -7,26 +8,23 @@ def register_board_tools(mcp: FastMCP):
     @mcp.tool()
     async def list_boards(
         ctx: Context,
+        fields: list[str] | None = None,
         use_cache: bool = True,
     ) -> str:
         """List all boards.
 
         Args:
+            fields: Optional list of additional fields (e.g. ["owner", "sprintsAvailable"])
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
-        
         boards = await manager.get("boards", tracker.boards.list, force=not use_cache)
 
-        if not boards:
-            return "No boards found."
-
-        lines = [f"Boards ({len(boards)}):\n"]
-        for b in boards:
-            bid = b.get("id", "?")
-            name = b.get("name", "")
-            lines.append(f"- [{bid}] {name}")
-        return "\n".join(lines)
+        return format_mcp_list(
+            boards, "Boards",
+            basic_fields=[],
+            extra_fields=fields
+        )
 
     @mcp.tool()
     async def get_board(
@@ -46,12 +44,14 @@ def register_board_tools(mcp: FastMCP):
     async def list_sprints(
         ctx: Context,
         board_id: int,
+        fields: list[str] | None = None,
         use_cache: bool = True,
     ) -> str:
         """List sprints of a board.
 
         Args:
             board_id: Board ID
+            fields: Optional list of additional fields
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
@@ -63,18 +63,12 @@ def register_board_tools(mcp: FastMCP):
             force=not use_cache
         )
 
-        if not sprints:
-            return f"No sprints for board {board_id}."
-
-        lines = [f"Sprints for board {board_id} ({len(sprints)}):\n"]
-        for s in sprints:
-            sid = s.get("id", "?")
-            name = s.get("name", "")
-            start = s.get("startDate", "")
-            end = s.get("endDate", "")
-            status = s.get("status", "")
-            lines.append(f"- [{sid}] {name} ({start} — {end}) [{status}]")
-        return "\n".join(lines)
+        return format_mcp_list(
+            sprints, f"Sprints for board {board_id}",
+            basic_fields=["startDate", "endDate", "status"],
+            extra_fields=fields,
+            template="- [{key}] **{name}** ({basics})"
+        )
 
     @mcp.tool()
     async def create_sprint(
@@ -132,10 +126,8 @@ def register_board_tools(mcp: FastMCP):
             statuses = c.get("statuses", [])
             status_names = []
             for s in statuses:
-                if isinstance(s, dict):
-                    status_names.append(s.get("display", s.get("key", "?")))
-                else:
-                    status_names.append(str(s))
+                from ..utils.formatters import _extract_display
+                status_names.append(_extract_display(s))
             lines.append(f"- [{cid}] {name}: {', '.join(status_names) if status_names else '-'}")
         return "\n".join(lines)
 

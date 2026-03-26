@@ -1,5 +1,6 @@
 from fastmcp import FastMCP, Context
 from ..utils.directory_manager import manager
+from ..utils.formatters import format_mcp_list
 
 
 def register_directory_tools(mcp: FastMCP):
@@ -15,20 +16,14 @@ def register_directory_tools(mcp: FastMCP):
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
-        
         types = await manager.get("issue_types", tracker.issues.types.list, force=not use_cache)
-
-        if not types:
-            return "No issue types found."
-
-        lines = ["Issue types:\n"]
-        for t in types:
-            key = t.get("key", "?")
-            name = t.get("name", "")
-            if isinstance(name, dict):
-                name = name.get("ru", name.get("en", str(name)))
-            lines.append(f"- **{key}** — {name}")
-        return "\n".join(lines)
+        
+        return format_mcp_list(
+            types, "Issue types", 
+            basic_fields=[], 
+            key_field="key", 
+            template="- **{key}** — {name}"
+        )
 
     @mcp.tool()
     async def list_statuses(
@@ -41,21 +36,14 @@ def register_directory_tools(mcp: FastMCP):
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
-        
         statuses = await manager.get("statuses", tracker.issues.statuses.list, force=not use_cache)
-
-        if not statuses:
-            return "No statuses found."
-
-        lines = ["Statuses:\n"]
-        for s in statuses:
-            key = s.get("key", "?")
-            name = s.get("name", "")
-            if isinstance(name, dict):
-                name = name.get("ru", name.get("en", str(name)))
-            stype = s.get("type", "")
-            lines.append(f"- **{key}** — {name} (type: {stype})")
-        return "\n".join(lines)
+        
+        return format_mcp_list(
+            statuses, "Statuses", 
+            basic_fields=["type"], 
+            key_field="key", 
+            template="- **{key}** — {name} ({basics})"
+        )
 
     @mcp.tool()
     async def list_priorities(
@@ -68,20 +56,14 @@ def register_directory_tools(mcp: FastMCP):
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
-        
         priorities = await manager.get("priorities", tracker.issues.priorities.list, force=not use_cache)
-
-        if not priorities:
-            return "No priorities found."
-
-        lines = ["Priorities:\n"]
-        for p in priorities:
-            key = p.get("key", "?")
-            name = p.get("name", "")
-            if isinstance(name, dict):
-                name = name.get("ru", name.get("en", str(name)))
-            lines.append(f"- **{key}** — {name}")
-        return "\n".join(lines)
+        
+        return format_mcp_list(
+            priorities, "Priorities", 
+            basic_fields=[], 
+            key_field="key", 
+            template="- **{key}** — {name}"
+        )
 
     @mcp.tool()
     async def list_resolutions(
@@ -94,54 +76,45 @@ def register_directory_tools(mcp: FastMCP):
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
-        
         resolutions = await manager.get("resolutions", tracker.issues.resolutions.list, force=not use_cache)
-
-        if not resolutions:
-            return "No resolutions found."
-
-        lines = ["Resolutions:\n"]
-        for r in resolutions:
-            key = r.get("key", "?")
-            name = r.get("name", "")
-            if isinstance(name, dict):
-                name = name.get("ru", name.get("en", str(name)))
-            lines.append(f"- **{key}** — {name}")
-        return "\n".join(lines)
+        
+        return format_mcp_list(
+            resolutions, "Resolutions", 
+            basic_fields=[], 
+            key_field="key", 
+            template="- **{key}** — {name}"
+        )
 
     @mcp.tool()
     async def list_queue_fields(
         ctx: Context,
         queue_key: str,
+        fields: list[str] | None = None,
         use_cache: bool = True,
     ) -> str:
         """List fields (including local fields) of a queue.
 
         Args:
             queue_key: Queue key (e.g. "DEV")
+            fields: Optional list of additional fields (e.g. ["optionsProvider", "category"])
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
         
-        fields = await manager.get(
+        data = await manager.get(
             "queue_fields", 
             lambda: tracker.queues.fields.list(queue_key),
             scope=queue_key,
             force=not use_cache
         )
 
-        if not fields:
-            return f"No fields for queue {queue_key}."
-
-        lines = [f"Fields for queue {queue_key} ({len(fields)}):\n"]
-        for f in fields:
-            fid = f.get("id", "?")
-            name = f.get("name", "")
-            if isinstance(name, dict):
-                name = name.get("ru", name.get("en", str(name)))
-            ftype = f.get("type", "")
-            lines.append(f"- **{fid}** — {name} ({ftype})")
-        return "\n".join(lines)
+        return format_mcp_list(
+            data, f"Fields for queue {queue_key}", 
+            basic_fields=["type"], 
+            extra_fields=fields,
+            key_field="id",
+            template="- **{key}** — {name} ({basics})"
+        )
 
     @mcp.tool()
     async def list_queue_tags(
@@ -182,42 +155,13 @@ def register_directory_tools(mcp: FastMCP):
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
-        
         components = await manager.get("components", tracker.components.list, force=not use_cache)
 
-        if not components:
-            return "No components found."
-
-        lines = ["Components:\n"]
-        for c in components:
-            cid = c.get("id", "?")
-            name = c.get("name", "")
-            queue = c.get("queue", {})
-            if isinstance(queue, dict):
-                queue = queue.get("key", queue.get("display", "?"))
-            lead = c.get("lead", {})
-            if isinstance(lead, dict):
-                lead = lead.get("display", "?")
-            
-            info = f"- [{cid}] **{name}** (queue: {queue}, lead: {lead})"
-            
-            if fields:
-                extra = []
-                fields_to_show = fields
-                if "all" in fields:
-                    fields_to_show = [k for k in c.keys() if k not in ["id", "name", "queue", "lead", "self"]]
-                
-                for f in fields_to_show:
-                    if f in c and f not in ["id", "name", "queue", "lead"]:
-                        val = c[f]
-                        if isinstance(val, dict):
-                            val = val.get("display", val.get("name", val.get("key", str(val))))
-                        extra.append(f"{f}: {val}")
-                if extra:
-                    info += f" | {', '.join(extra)}"
-            
-            lines.append(info)
-        return "\n".join(lines)
+        return format_mcp_list(
+            components, "Components", 
+            basic_fields=["queue", "lead"], 
+            extra_fields=fields
+        )
 
     @mcp.tool()
     async def get_component(
@@ -253,10 +197,8 @@ def register_directory_tools(mcp: FastMCP):
             if k == "name" or k == "id":
                 continue
             
-            display_val = v
-            if isinstance(v, dict):
-                display_val = v.get("display", v.get("name", v.get("key", str(v))))
-            
+            from ..utils.formatters import _extract_display
+            display_val = _extract_display(v)
             lines.append(f"**{k}**: {display_val}")
             
         return "\n".join(lines)
@@ -348,21 +290,13 @@ def register_directory_tools(mcp: FastMCP):
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
-        
         fields = await manager.get("global_fields", tracker.issues.fields.list, force=not use_cache)
 
-        if not fields:
-            return "No global fields found."
-
-        lines = [f"Global fields ({len(fields)}):\n"]
-        for f in fields:
-            fid = f.get("id", "?")
-            name = f.get("name", "")
-            if isinstance(name, dict):
-                name = name.get("ru", name.get("en", str(name)))
-            ftype = f.get("type", "")
-            lines.append(f"- **{fid}** — {name} ({ftype})")
-        return "\n".join(lines)
+        return format_mcp_list(
+            fields, "Global fields", 
+            basic_fields=["type"], 
+            template="- **{key}** — {name} ({basics})"
+        )
 
     @mcp.tool()
     async def list_field_categories(
@@ -375,20 +309,13 @@ def register_directory_tools(mcp: FastMCP):
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
-        
         categories = await manager.get("field_categories", tracker.issues.fields.categories.list, force=not use_cache)
 
-        if not categories:
-            return "No field categories found."
-
-        lines = [f"Field categories ({len(categories)}):\n"]
-        for c in categories:
-            cid = c.get("id", "?")
-            name = c.get("name", "")
-            if isinstance(name, dict):
-                name = name.get("ru", name.get("en", str(name)))
-            lines.append(f"- [{cid}] **{name}**")
-        return "\n".join(lines)
+        return format_mcp_list(
+            categories, "Field categories", 
+            basic_fields=[], 
+            template="- [{key}] **{name}**"
+        )
 
     # --- Cache Management Tools ---
 
@@ -565,5 +492,3 @@ def register_directory_tools(mcp: FastMCP):
         await tracker.issues.resolutions.create(key=key, name=name)
         await manager.get("resolutions", tracker.issues.resolutions.list, force=True)
         return f"Resolution '{key}' created."
-
-    # Note: update_* tools also need invalidation if implemented
