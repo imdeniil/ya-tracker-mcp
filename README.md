@@ -122,18 +122,18 @@ You need an OAuth token and organization ID:
 ### Boards & Sprints (12)
 | Tool | Description |
 |------|-------------|
-| `list_boards` | List all boards |
+| `list_boards` | List all boards (cached) |
 | `get_board` | Board details |
-| `create_board` | Create board |
-| `update_board` | Update board settings |
-| `delete_board` | Delete board |
+| `create_board` | Create board (invalidates cache) |
+| `update_board` | Update board settings (invalidates cache) |
+| `delete_board` | Delete board (invalidates cache) |
 | `list_board_columns` | Board columns with statuses |
 | `create_board_column` | Create column |
 | `update_board_column` | Update column |
 | `delete_board_column` | Delete column |
-| `list_sprints` | Board sprints |
+| `list_sprints` | Board sprints (cached) |
 | `get_sprint` | Sprint details |
-| `create_sprint` | Create sprint |
+| `create_sprint` | Create sprint (invalidates cache) |
 
 ### Worklog (5)
 | Tool | Description |
@@ -162,14 +162,14 @@ You need an OAuth token and organization ID:
 ### Queues (10)
 | Tool | Description |
 |------|-------------|
-| `list_queues` | List all queues |
+| `list_queues` | List all queues (cached) |
 | `get_queue` | Queue details (expand: components, versions) |
-| `create_queue` | Create queue |
-| `delete_queue` | Delete queue |
-| `restore_queue` | Restore deleted queue |
+| `create_queue` | Create queue (invalidates cache) |
+| `delete_queue` | Delete queue (invalidates cache) |
+| `restore_queue` | Restore deleted queue (invalidates cache) |
 | `list_queue_versions` | List queue versions |
 | `create_queue_version` | Create version |
-| `delete_queue_tag` | Delete queue tag |
+| `delete_queue_tag` | Delete queue tag (invalidates cache) |
 | `get_queue_user_permissions` | Get user permissions for queue |
 | `update_queue_permissions` | Update queue access permissions |
 
@@ -178,36 +178,44 @@ You need an OAuth token and organization ID:
 |------|-------------|
 | `get_myself` | Current user info |
 | `get_user` | Get specific user info |
-| `list_users` | Organization users |
+| `list_users` | Organization users (cached) |
+
+### Cache Management (4)
+| Tool | Description |
+|------|-------------|
+| `get_cache_status` | Show status of directories cache (TTL, last updated, record count) |
+| `sync_directory` | Manually sync a specific directory from API (supports scope) |
+| `sync_all_directories` | Force sync all basic directories from API |
+| `configure_cache` | Configure TTL for a specific directory cache |
 
 ### Directories — Reference Data (27)
 | Tool | Description |
 |------|-------------|
-| `list_issue_types` | All issue types |
-| `create_issue_type` | Create issue type |
+| `list_issue_types` | All issue types (cached) |
+| `create_issue_type` | Create issue type (invalidates cache) |
 | `update_issue_type` | Update issue type |
-| `list_statuses` | All statuses |
-| `create_status` | Create status |
+| `list_statuses` | All statuses (cached) |
+| `create_status` | Create status (invalidates cache) |
 | `update_status` | Update status |
-| `list_priorities` | All priorities |
-| `create_priority` | Create priority |
+| `list_priorities` | All priorities (cached) |
+| `create_priority` | Create priority (invalidates cache) |
 | `update_priority` | Update priority |
-| `list_resolutions` | All resolutions |
-| `create_resolution` | Create resolution |
+| `list_resolutions` | All resolutions (cached) |
+| `create_resolution` | Create resolution (invalidates cache) |
 | `update_resolution` | Update resolution |
-| `list_global_fields` | Global fields |
+| `list_global_fields` | Global fields (cached) |
 | `get_field` | Get field details |
 | `create_field` | Create global field |
 | `update_field` | Update global field |
-| `list_queue_fields` | Queue fields (including local) |
+| `list_queue_fields` | Queue fields (cached) |
 | `get_local_field` | Get local field |
 | `create_local_field` | Create local field |
 | `update_local_field` | Update local field |
-| `list_queue_tags` | Queue tags |
-| `list_components` | All components |
-| `create_component` | Create component |
-| `update_component` | Update component |
-| `list_field_categories` | List field categories |
+| `list_queue_tags` | Queue tags (cached) |
+| `list_components` | All components (cached) |
+| `create_component` | Create component (invalidates cache) |
+| `update_component` | Update component (invalidates cache) |
+| `list_field_categories` | List field categories (cached) |
 | `create_field_category` | Create field category (bilingual name) |
 | `update_field_category` | Update field category |
 
