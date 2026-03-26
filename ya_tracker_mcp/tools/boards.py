@@ -5,11 +5,18 @@ from ..utils.directory_manager import manager
 def register_board_tools(mcp: FastMCP):
 
     @mcp.tool()
-    async def list_boards(ctx: Context) -> str:
-        """List all boards."""
+    async def list_boards(
+        ctx: Context,
+        use_cache: bool = True,
+    ) -> str:
+        """List all boards.
+
+        Args:
+            use_cache: Whether to use local cache (default: True)
+        """
         tracker = ctx.lifespan_context["tracker"]
         
-        boards = await manager.get("boards", tracker.boards.list)
+        boards = await manager.get("boards", tracker.boards.list, force=not use_cache)
 
         if not boards:
             return "No boards found."
@@ -39,18 +46,21 @@ def register_board_tools(mcp: FastMCP):
     async def list_sprints(
         ctx: Context,
         board_id: int,
+        use_cache: bool = True,
     ) -> str:
         """List sprints of a board.
 
         Args:
             board_id: Board ID
+            use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
         
         sprints = await manager.get(
             "sprints",
             lambda: tracker.boards.sprints.list(board_id),
-            scope=str(board_id)
+            scope=str(board_id),
+            force=not use_cache
         )
 
         if not sprints:

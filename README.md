@@ -188,6 +188,8 @@ You need an OAuth token and organization ID:
 | `sync_all_directories` | Force sync all basic directories from API |
 | `configure_cache` | Configure TTL for a specific directory cache |
 
+> **Tip:** Most `list_*` tools now support a `use_cache: bool` parameter (default: `True`). Set it to `False` to force a fresh fetch from the API.
+
 ### Directories — Reference Data (27)
 | Tool | Description |
 |------|-------------|

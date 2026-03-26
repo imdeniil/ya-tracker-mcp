@@ -29,16 +29,18 @@ def register_user_tools(mcp: FastMCP):
     async def list_users(
         ctx: Context,
         per_page: int | None = None,
+        use_cache: bool = True,
     ) -> str:
         """List organization users.
 
         Args:
             per_page: Results per page (if not using cache)
+            use_cache: Whether to use local cache (default: True). Note: per_page is ignored if using cache.
         """
         tracker = ctx.lifespan_context["tracker"]
 
         if per_page is None:
-            users = await manager.get("users", tracker.users.list)
+            users = await manager.get("users", tracker.users.list, force=not use_cache)
         else:
             users = await tracker.users.list(per_page=per_page)
 

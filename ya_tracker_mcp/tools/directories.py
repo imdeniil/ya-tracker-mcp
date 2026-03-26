@@ -5,11 +5,18 @@ from ..utils.directory_manager import manager
 def register_directory_tools(mcp: FastMCP):
 
     @mcp.tool()
-    async def list_issue_types(ctx: Context) -> str:
-        """List all issue types in the organization."""
+    async def list_issue_types(
+        ctx: Context,
+        use_cache: bool = True,
+    ) -> str:
+        """List all issue types in the organization.
+
+        Args:
+            use_cache: Whether to use local cache (default: True)
+        """
         tracker = ctx.lifespan_context["tracker"]
         
-        types = await manager.get("issue_types", tracker.issues.types.list)
+        types = await manager.get("issue_types", tracker.issues.types.list, force=not use_cache)
 
         if not types:
             return "No issue types found."
@@ -24,11 +31,18 @@ def register_directory_tools(mcp: FastMCP):
         return "\n".join(lines)
 
     @mcp.tool()
-    async def list_statuses(ctx: Context) -> str:
-        """List all issue statuses in the organization."""
+    async def list_statuses(
+        ctx: Context,
+        use_cache: bool = True,
+    ) -> str:
+        """List all issue statuses in the organization.
+
+        Args:
+            use_cache: Whether to use local cache (default: True)
+        """
         tracker = ctx.lifespan_context["tracker"]
         
-        statuses = await manager.get("statuses", tracker.issues.statuses.list)
+        statuses = await manager.get("statuses", tracker.issues.statuses.list, force=not use_cache)
 
         if not statuses:
             return "No statuses found."
@@ -44,11 +58,18 @@ def register_directory_tools(mcp: FastMCP):
         return "\n".join(lines)
 
     @mcp.tool()
-    async def list_priorities(ctx: Context) -> str:
-        """List all issue priorities in the organization."""
+    async def list_priorities(
+        ctx: Context,
+        use_cache: bool = True,
+    ) -> str:
+        """List all issue priorities in the organization.
+
+        Args:
+            use_cache: Whether to use local cache (default: True)
+        """
         tracker = ctx.lifespan_context["tracker"]
         
-        priorities = await manager.get("priorities", tracker.issues.priorities.list)
+        priorities = await manager.get("priorities", tracker.issues.priorities.list, force=not use_cache)
 
         if not priorities:
             return "No priorities found."
@@ -63,11 +84,18 @@ def register_directory_tools(mcp: FastMCP):
         return "\n".join(lines)
 
     @mcp.tool()
-    async def list_resolutions(ctx: Context) -> str:
-        """List all issue resolutions in the organization."""
+    async def list_resolutions(
+        ctx: Context,
+        use_cache: bool = True,
+    ) -> str:
+        """List all issue resolutions in the organization.
+
+        Args:
+            use_cache: Whether to use local cache (default: True)
+        """
         tracker = ctx.lifespan_context["tracker"]
         
-        resolutions = await manager.get("resolutions", tracker.issues.resolutions.list)
+        resolutions = await manager.get("resolutions", tracker.issues.resolutions.list, force=not use_cache)
 
         if not resolutions:
             return "No resolutions found."
@@ -85,18 +113,21 @@ def register_directory_tools(mcp: FastMCP):
     async def list_queue_fields(
         ctx: Context,
         queue_key: str,
+        use_cache: bool = True,
     ) -> str:
         """List fields (including local fields) of a queue.
 
         Args:
             queue_key: Queue key (e.g. "DEV")
+            use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
         
         fields = await manager.get(
             "queue_fields", 
             lambda: tracker.queues.fields.list(queue_key),
-            scope=queue_key
+            scope=queue_key,
+            force=not use_cache
         )
 
         if not fields:
@@ -116,18 +147,21 @@ def register_directory_tools(mcp: FastMCP):
     async def list_queue_tags(
         ctx: Context,
         queue_key: str,
+        use_cache: bool = True,
     ) -> str:
         """List tags used in a queue.
 
         Args:
             queue_key: Queue key (e.g. "DEV")
+            use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
         
         tags = await manager.get(
             "queue_tags",
             lambda: tracker.queues.tags.list(queue_key),
-            scope=queue_key
+            scope=queue_key,
+            force=not use_cache
         )
 
         if not tags:
@@ -139,15 +173,17 @@ def register_directory_tools(mcp: FastMCP):
     async def list_components(
         ctx: Context,
         fields: list[str] | None = None,
+        use_cache: bool = True,
     ) -> str:
         """List all components in the organization.
 
         Args:
             fields: Optional list of additional fields to show (e.g. ["description", "assignAuto"])
+            use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
         
-        components = await manager.get("components", tracker.components.list)
+        components = await manager.get("components", tracker.components.list, force=not use_cache)
 
         if not components:
             return "No components found."
@@ -183,20 +219,22 @@ def register_directory_tools(mcp: FastMCP):
     async def get_component(
         ctx: Context,
         component_id: int,
+        use_cache: bool = True,
     ) -> str:
         """Get detailed information about a specific component by ID.
 
         Args:
             component_id: Numerical ID of the component
+            use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
-        components = await manager.get("components", tracker.components.list)
+        components = await manager.get("components", tracker.components.list, force=not use_cache)
         
         # Search in cache
         component = next((c for c in components if str(c.get("id")) == str(component_id)), None)
         
-        if not component:
-            # Try to force refresh cache once
+        if not component and use_cache:
+            # If not found in cache and we were using cache, try to force refresh once
             components = await manager.get("components", tracker.components.list, force=True)
             component = next((c for c in components if str(c.get("id")) == str(component_id)), None)
             
@@ -296,11 +334,18 @@ def register_directory_tools(mcp: FastMCP):
         return f"Component updated: [{component_id}] {cname}"
 
     @mcp.tool()
-    async def list_global_fields(ctx: Context) -> str:
-        """List all global issue fields."""
+    async def list_global_fields(
+        ctx: Context,
+        use_cache: bool = True,
+    ) -> str:
+        """List all global issue fields.
+
+        Args:
+            use_cache: Whether to use local cache (default: True)
+        """
         tracker = ctx.lifespan_context["tracker"]
         
-        fields = await manager.get("global_fields", tracker.issues.fields.list)
+        fields = await manager.get("global_fields", tracker.issues.fields.list, force=not use_cache)
 
         if not fields:
             return "No global fields found."
@@ -316,11 +361,18 @@ def register_directory_tools(mcp: FastMCP):
         return "\n".join(lines)
 
     @mcp.tool()
-    async def list_field_categories(ctx: Context) -> str:
-        """List all field categories."""
+    async def list_field_categories(
+        ctx: Context,
+        use_cache: bool = True,
+    ) -> str:
+        """List all field categories.
+
+        Args:
+            use_cache: Whether to use local cache (default: True)
+        """
         tracker = ctx.lifespan_context["tracker"]
         
-        categories = await manager.get("field_categories", tracker.issues.fields.categories.list)
+        categories = await manager.get("field_categories", tracker.issues.fields.categories.list, force=not use_cache)
 
         if not categories:
             return "No field categories found."

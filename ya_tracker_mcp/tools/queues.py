@@ -8,17 +8,19 @@ def register_queue_tools(mcp: FastMCP):
     async def list_queues(
         ctx: Context,
         per_page: int | None = None,
+        use_cache: bool = True,
     ) -> str:
         """List all available queues.
 
         Args:
             per_page: Results per page (if not using cache)
+            use_cache: Whether to use local cache (default: True). Note: per_page is ignored if using cache.
         """
         tracker = ctx.lifespan_context["tracker"]
 
         # Cache only the full list (without per_page filter)
         if per_page is None:
-            queues = await manager.get("queues", tracker.queues.list)
+            queues = await manager.get("queues", tracker.queues.list, force=not use_cache)
         else:
             queues = await tracker.queues.list(per_page=per_page)
 
