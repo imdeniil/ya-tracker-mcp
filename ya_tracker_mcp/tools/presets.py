@@ -82,6 +82,7 @@ def register_preset_tools(mcp: FastMCP):
         queue: str,
         input_values: dict,
         overrides: dict | None = None,
+        extra_fields: dict | None = None,
     ) -> str:
         """Create an issue from a preset template.
 
@@ -90,6 +91,7 @@ def register_preset_tools(mcp: FastMCP):
             queue: Queue key (e.g. "DEV")
             input_values: Dict of template placeholders (e.g. {"description": "...", "steps": "..."})
             overrides: Optional dict to override preset params (e.g. {"priority": "normal"})
+            extra_fields: Additional/custom/local fields as dict
         """
         presets = _load_presets()
         preset = presets.get(preset_name)
@@ -110,18 +112,18 @@ def register_preset_tools(mcp: FastMCP):
 
         kwargs = {"description": description}
 
+        # Handle special mappings and formatting
         if "type" in params:
             kwargs["issue_type"] = params.pop("type")
-        if "priority" in params:
-            kwargs["priority"] = params.pop("priority")
-        if "assignee" in params:
-            kwargs["assignee"] = params.pop("assignee")
-        if "tags" in params:
-            kwargs["tags"] = params.pop("tags")
-        if "components" in params:
-            kwargs["components"] = params.pop("components")
         if "sprint" in params:
             kwargs["sprint"] = [{"id": int(params.pop("sprint"))}]
+
+        # Pass all remaining params (priority, assignee, tags, components, parent, etc.)
+        kwargs.update(params)
+
+        # Explicit extra_fields take precedence
+        if extra_fields:
+            kwargs.update(extra_fields)
 
         summary = input_values.get("summary", input_values.get("what", input_values.get("description", "")[:100]))
 
@@ -150,7 +152,7 @@ def register_preset_tools(mcp: FastMCP):
         Args:
             preset_name: Preset key (e.g. "bug_report")
             name: Human-readable preset name
-            params: Default issue params (e.g. {"type": "bug", "priority": "critical"})
+            params: Default issue params (e.g. {"type": "bug", "priority": "critical"}). Supports all fields from create_issue.
             description_template: Template with {input.field} placeholders
             rules: List of rules for the AI assistant
             description: Short description of the preset

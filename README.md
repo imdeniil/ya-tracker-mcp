@@ -278,8 +278,8 @@ You need an OAuth token and organization ID:
 |------|-------------|
 | `list_presets` | Available task presets |
 | `get_preset` | Preset details (params, template, rules) |
-| `create_from_preset` | Create issue from preset |
-| `add_preset` | Add or update a preset at runtime |
+| `create_from_preset` | Create issue from preset (supports overrides and extra_fields) |
+| `add_preset` | Add or update a preset at runtime (params supports all create_issue fields) |
 | `remove_preset` | Remove a preset |
 
 ### Team Directory (3)
@@ -313,7 +313,7 @@ You need an OAuth token and organization ID:
 
 ### Task Presets
 
-Define presets in `config/presets.yaml` or manage at runtime with `add_preset` / `remove_preset`:
+Define presets in `config/presets.yaml` or manage at runtime with `add_preset` / `remove_preset`. `params` section supports all fields from `create_issue` (type, priority, assignee, tags, components, sprint, parent, project, followers, deadline, story_points, original_estimation, extra_fields):
 
 ```yaml
 presets:
@@ -323,6 +323,8 @@ presets:
     params:
       type: "bug"
       priority: "critical"
+      tags: ["bug", "regression"]
+      components: ["API"]
     description_template: |
       ## Steps to reproduce
       {input.steps}

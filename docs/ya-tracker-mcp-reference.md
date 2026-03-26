@@ -882,13 +882,16 @@ presets:
   bug_report:
     name: "Баг-репорт"
     description: "Создание бага с обязательными полями для воспроизведения"
-    # Предустановленные параметры задачи
+    # Предустановленные параметры задачи. Поддерживаются все поля из create_issue:
+    # type, priority, assignee, tags, components, sprint, parent, project,
+    # followers, deadline, story_points, original_estimation, extra_fields
     params:
       queue: "DEV"
       type: "bug"
       priority: "critical"
       components: ["backend"]
-      tags: ["bug"]
+      tags: ["bug", "regression"]
+      extra_fields: {"severity": "S1"}
     # Шаблон описания (YFM, поддерживает плейсхолдеры {input.*})
     description_template: |
       ## Описание

@@ -49,3 +49,25 @@ presets:
       priority: "normal"
     description_template: "{input.description}"
     rules: []
+
+  my_task:
+    name: "Задача Даниила"
+    description: "Личная задача руководителя с авто-привязкой к BLESK-67"
+    params:
+      type: "task"
+      priority: "normal"
+      assignee: "imdeniil"
+    description_template: |
+      **Суть:** {input.description}
+
+      **Зачем:** {input.why}
+
+      **Ожидаемый результат:** {input.result}
+    rules:
+      - "После создания привязать как подзадачу к BLESK-67"
+      - "Установить Флагман: imdeniil"
+      - "Установить проект: JUMMY (303)"
+      - "Определить компонент по контексту задачи"
+      - "Дедлайн — конец текущей недели если не указан"
+      - "Дата начала — начало текущей недели если не указана"
+      - "Тип задачи определять по контексту: meeting для созвонов, bug для багов, research для исследований, review для ревью"
