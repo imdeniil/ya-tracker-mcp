@@ -97,15 +97,7 @@ def register_issue_tools(mcp: FastMCP):
             fields: Optional list of fields to show. Use ["all"] for all fields.
         """
         tracker = ctx.lifespan_context["tracker"]
-        
-        # Prepare API fields if specified
-        api_fields = None
-        if fields and "all" not in fields:
-            # Add basic fields we always want
-            base = ["summary", "status", "type", "priority", "assignee", "createdAt", "updatedAt", "description"]
-            api_fields = ",".join(set(base + fields))
-
-        issue = await tracker.issues.get(issue_key, expand=expand, fields=api_fields)
+        issue = await tracker.issues.get(issue_key, expand=expand)
         return _format_issue_full(issue, fields)
 
     @mcp.tool()
