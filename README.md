@@ -63,12 +63,12 @@ You need an OAuth token and organization ID:
 ### Issues (7)
 | Tool | Description |
 |------|-------------|
-| `create_issue` | Create issue (queue, summary, type, priority, assignee, extra_fields for custom/local fields) |
-| `get_issue` | Get issue details with optional expand (transitions, attachments) |
-| `update_issue` | Update issue fields (supports extra_fields for custom/local fields) |
-| `search_issues` | Search with query language or filters |
+| `create_issue` | Create issue (supports `fields` in response) |
+| `get_issue` | Get issue details (supports `fields` and `["all"]`) |
+| `update_issue` | Update issue fields (supports `fields` in response) |
+| `search_issues` | Search with query language or filters (supports `fields`) |
 | `count_issues` | Count matching issues |
-| `move_issue` | Move to another queue |
+| `move_issue` | Move to another queue (supports `fields` in response) |
 | `issue_changelog` | Get issue change history (filter by field) |
 
 ### Comments (4)
@@ -95,11 +95,11 @@ You need an OAuth token and organization ID:
 ### Entities — Projects / Portfolios / Goals (23)
 | Tool | Description |
 |------|-------------|
-| `create_entity` | Create project, portfolio, or goal |
-| `get_entity` | Get entity with fields |
-| `update_entity` | Update entity |
+| `create_entity` | Create project, portfolio, or goal (supports `fields`) |
+| `get_entity` | Get entity with fields (supports `["all"]`) |
+| `update_entity` | Update entity (supports `fields`) |
 | `delete_entity` | Delete entity |
-| `search_entities` | Search entities |
+| `search_entities` | Search entities (supports `fields`) |
 | `entity_changelog` | Get entity change history |
 | `update_key_results` | Update goal key results |
 | `update_entity_metrics` | Update entity metrics |
@@ -188,9 +188,9 @@ You need an OAuth token and organization ID:
 | `sync_all_directories` | Force sync all basic directories from API |
 | `configure_cache` | Configure TTL for a specific directory cache |
 
-> **Universal List Parameters:** Most `list_*` tools (Queues, Components, Boards, Sprints, Users, Fields) now support:
+> **Universal Parameters:** Most `list_*`, `get_*` and `search_*` tools (Issues, Entities, Queues, Components, Boards, Sprints, Users, Fields) now support:
 > - `fields: list[str]` — Additional fields to show. Use `["all"]` to see every field available in the API.
-> - `use_cache: bool` — Set to `False` to bypass local cache and fetch fresh data from Yandex Tracker.
+> - `use_cache: bool` — (For cached tools) Set to `False` to bypass local cache and fetch fresh data from Yandex Tracker.
 
 ### Directories — Reference Data (27)
 | Tool | Description |

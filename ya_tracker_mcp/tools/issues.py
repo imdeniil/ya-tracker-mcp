@@ -1,4 +1,5 @@
 from fastmcp import FastMCP, Context
+from ..utils.formatters import format_mcp_item, format_mcp_list
 
 
 def register_issue_tools(mcp: FastMCP):
@@ -21,6 +22,7 @@ def register_issue_tools(mcp: FastMCP):
         story_points: float | None = None,
         original_estimation: str | None = None,
         extra_fields: dict | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """Create a new issue in Yandex Tracker.
 
@@ -40,6 +42,7 @@ def register_issue_tools(mcp: FastMCP):
             story_points: Story points estimate
             original_estimation: Original estimation in ISO 8601 (e.g. "PT2H", "P1D")
             extra_fields: Additional/custom/local fields as dict (e.g. {"coAssignees": ["user1"], "myCustomField": "value"})
+            fields: Optional list of fields to show in response. Use ["all"] for all fields.
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -77,23 +80,33 @@ def register_issue_tools(mcp: FastMCP):
             **kwargs,
         )
 
-        return _format_issue(issue)
+        return _format_issue_full(issue, fields)
 
     @mcp.tool()
     async def get_issue(
         ctx: Context,
         issue_key: str,
         expand: str | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """Get issue details by key.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")
             expand: Expand additional fields: "transitions", "attachments", or "transitions,attachments"
+            fields: Optional list of fields to show. Use ["all"] for all fields.
         """
         tracker = ctx.lifespan_context["tracker"]
-        issue = await tracker.issues.get(issue_key, expand=expand)
-        return _format_issue(issue)
+        
+        # Prepare API fields if specified
+        api_fields = None
+        if fields and "all" not in fields:
+            # Add basic fields we always want
+            base = ["summary", "status", "type", "priority", "assignee", "createdAt", "updatedAt", "description"]
+            api_fields = ",".join(set(base + fields))
+
+        issue = await tracker.issues.get(issue_key, expand=expand, fields=api_fields)
+        return _format_issue_full(issue, fields)
 
     @mcp.tool()
     async def update_issue(
@@ -112,6 +125,7 @@ def register_issue_tools(mcp: FastMCP):
         deadline: str | None = None,
         story_points: float | None = None,
         extra_fields: dict | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """Update an existing issue.
 
@@ -130,6 +144,7 @@ def register_issue_tools(mcp: FastMCP):
             deadline: Deadline (YYYY-MM-DD)
             story_points: Story points
             extra_fields: Additional/custom/local fields as dict (e.g. {"coAssignees": ["user1"], "myCustomField": "value"})
+            fields: Optional list of fields to show in response. Use ["all"] for all fields.
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -162,7 +177,7 @@ def register_issue_tools(mcp: FastMCP):
             kwargs.update(extra_fields)
 
         issue = await tracker.issues.update(issue_key, **kwargs)
-        return _format_issue(issue)
+        return _format_issue_full(issue, fields)
 
     @mcp.tool()
     async def search_issues(
@@ -173,6 +188,7 @@ def register_issue_tools(mcp: FastMCP):
         order: str | None = None,
         per_page: int | None = None,
         page: int | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """Search issues using query language or filters.
 
@@ -183,6 +199,7 @@ def register_issue_tools(mcp: FastMCP):
             order: Sort order (e.g. "Created DESC", "Priority ASC")
             per_page: Results per page (default 50)
             page: Page number (1-based)
+            fields: Optional list of additional fields to show. Use ["all"] for all fields.
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -202,13 +219,14 @@ def register_issue_tools(mcp: FastMCP):
 
         issues = await tracker.issues.search(**kwargs)
 
-        if not issues:
-            return "No issues found."
-
-        lines = [f"Found {len(issues)} issue(s):\n"]
-        for issue in issues:
-            lines.append(_format_issue_short(issue))
-        return "\n".join(lines)
+        return format_mcp_list(
+            issues, "Issues",
+            basic_fields=["status", "priority", "assignee"],
+            extra_fields=fields,
+            key_field="key",
+            name_field="summary",
+            template="- **{key}** [{basics}] {name}"
+        )
 
     @mcp.tool()
     async def count_issues(
@@ -278,93 +296,36 @@ def register_issue_tools(mcp: FastMCP):
         ctx: Context,
         issue_key: str,
         queue: str,
+        fields: list[str] | None = None,
     ) -> str:
         """Move issue to another queue.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")
             queue: Target queue key (e.g. "SUPPORT")
+            fields: Optional list of fields to show in response.
         """
         tracker = ctx.lifespan_context["tracker"]
         issue = await tracker.issues.move(issue_key, queue)
-        return _format_issue(issue)
+        return _format_issue_full(issue, fields)
 
 
-def _format_issue(issue: dict) -> str:
-    key = issue.get("key", "?")
-    summary = issue.get("summary", "")
-    status = _extract_display(issue.get("status"))
-    priority = _extract_display(issue.get("priority"))
-    issue_type = _extract_display(issue.get("type"))
-    assignee = _extract_display(issue.get("assignee"))
-    author = _extract_display(issue.get("createdBy"))
-    created = issue.get("createdAt", "")
-    updated = issue.get("updatedAt", "")
-    deadline = issue.get("deadline", "")
-    description = issue.get("description", "")
-    tags = issue.get("tags", [])
-    sp = issue.get("storyPoints")
-
-    lines = [
-        f"**{key}**: {summary}",
-        f"Status: {status} | Type: {issue_type} | Priority: {priority}",
-    ]
-    if assignee:
-        lines.append(f"Assignee: {assignee}")
-    if author:
-        lines.append(f"Author: {author}")
-    if deadline:
-        lines.append(f"Deadline: {deadline}")
-    if sp is not None:
-        lines.append(f"Story Points: {sp}")
-    if tags:
-        lines.append(f"Tags: {', '.join(tags)}")
-    if created:
-        lines.append(f"Created: {created}")
-    if updated:
-        lines.append(f"Updated: {updated}")
-    if description:
-        desc_preview = description[:500]
-        if len(description) > 500:
-            desc_preview += "..."
-        lines.append(f"\nDescription:\n{desc_preview}")
-
+def _format_issue_full(issue: dict, extra_fields: list[str] | None = None) -> str:
+    res = format_mcp_item(
+        issue, "Issue",
+        basic_fields=["status", "type", "priority", "assignee", "createdAt", "updatedAt", "deadline", "tags", "storyPoints"],
+        extra_fields=extra_fields,
+        key_field="key",
+        name_field="summary",
+        template="**{key}**: {name}\n{basics}"
+    )
+    
     # Transitions if expanded
     transitions = issue.get("transitions")
     if transitions:
         trans_names = [t.get("display", t.get("id", "?")) for t in transitions]
-        lines.append(f"\nAvailable transitions: {', '.join(trans_names)}")
+        res += f"\n\nAvailable transitions: {', '.join(trans_names)}"
 
-    lines.append(f"\nhttps://tracker.yandex.ru/{key}")
-    return "\n".join(lines)
-
-
-def _format_issue_short(issue: dict) -> str:
     key = issue.get("key", "?")
-    summary = issue.get("summary", "")
-    status = _extract_display(issue.get("status"))
-    priority = _extract_display(issue.get("priority"))
-    assignee = _extract_display(issue.get("assignee"))
-    deadline = issue.get("deadline", "")
-
-    line = f"- **{key}** [{status}] {summary}"
-    parts = []
-    if priority:
-        parts.append(f"P:{priority}")
-    if assignee:
-        parts.append(f"@{assignee}")
-    if deadline:
-        parts.append(f"DL:{deadline}")
-    if parts:
-        line += f" ({', '.join(parts)})"
-    return line
-
-
-def _extract_display(obj) -> str:
-    if obj is None:
-        return ""
-    if isinstance(obj, str):
-        return obj
-    if isinstance(obj, dict):
-        return obj.get("display", obj.get("name", obj.get("key", obj.get("id", str(obj)))))
-    return str(obj)
+    res += f"\n\nhttps://tracker.yandex.ru/{key}"
+    return res

@@ -1,4 +1,5 @@
 from fastmcp import FastMCP, Context
+from ..utils.formatters import format_mcp_item, format_mcp_list
 
 
 def register_entity_tools(mcp: FastMCP):
@@ -18,6 +19,7 @@ def register_entity_tools(mcp: FastMCP):
         tags: list[str] | None = None,
         parent_entity: str | None = None,
         entity_status: str | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """Create a project, portfolio, or goal.
 
@@ -34,6 +36,7 @@ def register_entity_tools(mcp: FastMCP):
             tags: List of tags
             parent_entity: Parent entity ID (as string)
             entity_status: Status (e.g. "in_progress", "draft", "at_risk")
+            fields: Optional list of fields to show in response.
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -60,25 +63,31 @@ def register_entity_tools(mcp: FastMCP):
             kwargs["entity_status"] = entity_status
 
         entity = await tracker.entities.create(entity_type, summary, **kwargs)
-        return _format_entity(entity, entity_type)
+        return _format_entity_full(entity, entity_type, fields)
 
     @mcp.tool()
     async def get_entity(
         ctx: Context,
         entity_type: str,
         entity_id: str,
-        fields: str | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """Get a project, portfolio, or goal by ID.
 
         Args:
             entity_type: "project", "portfolio", or "goal"
             entity_id: Entity ID
-            fields: Comma-separated fields to return (e.g. "summary,description,lead,teamAccess,entityStatus,checklistItems")
+            fields: Optional list of fields to return. Use ["all"] for all fields.
         """
         tracker = ctx.lifespan_context["tracker"]
-        entity = await tracker.entities.get(entity_type, entity_id, fields=fields)
-        return _format_entity(entity, entity_type)
+        
+        api_fields = None
+        if fields and "all" not in fields:
+            # Note: entities API expects comma-separated string
+            api_fields = ",".join(fields)
+
+        entity = await tracker.entities.get(entity_type, entity_id, fields=api_fields)
+        return _format_entity_full(entity, entity_type, fields)
 
     @mcp.tool()
     async def update_entity(
@@ -96,6 +105,7 @@ def register_entity_tools(mcp: FastMCP):
         tags: list[str] | None = None,
         entity_status: str | None = None,
         comment: str | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """Update a project, portfolio, or goal.
 
@@ -113,6 +123,7 @@ def register_entity_tools(mcp: FastMCP):
             tags: Tags
             entity_status: New status
             comment: Comment about the change
+            fields: Optional list of fields to show in response.
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -141,7 +152,7 @@ def register_entity_tools(mcp: FastMCP):
             kwargs["comment"] = comment
 
         entity = await tracker.entities.update(entity_type, entity_id, **kwargs)
-        return _format_entity(entity, entity_type)
+        return _format_entity_full(entity, entity_type, fields)
 
     @mcp.tool()
     async def delete_entity(
@@ -166,7 +177,7 @@ def register_entity_tools(mcp: FastMCP):
         ctx: Context,
         entity_type: str,
         input: str | None = None,
-        fields: str | None = None,
+        fields: list[str] | None = None,
         per_page: int | None = None,
         page: int | None = None,
         root_only: bool | None = None,
@@ -176,7 +187,7 @@ def register_entity_tools(mcp: FastMCP):
         Args:
             entity_type: "project", "portfolio", or "goal"
             input: Text search query
-            fields: Fields to return (e.g. "summary,lead,entityStatus")
+            fields: Optional list of fields to return. Use ["all"] for all fields.
             per_page: Results per page
             page: Page number
             root_only: Only return top-level entities
@@ -187,7 +198,9 @@ def register_entity_tools(mcp: FastMCP):
         if input is not None:
             kwargs["input"] = input
         if fields is not None:
-            kwargs["fields"] = fields
+            # API expects comma-separated string for fields
+            if "all" not in fields:
+                kwargs["fields"] = ",".join(fields)
         if per_page is not None:
             kwargs["per_page"] = per_page
         if page is not None:
@@ -203,10 +216,14 @@ def register_entity_tools(mcp: FastMCP):
         if not values:
             return f"No {entity_type}s found."
 
-        lines = [f"Found {hits} {entity_type}(s):\n"]
-        for e in values:
-            lines.append(_format_entity_short(e, entity_type))
-        return "\n".join(lines)
+        return format_mcp_list(
+            values, f"{entity_type.capitalize()}s",
+            basic_fields=["entityStatus", "lead"],
+            extra_fields=fields,
+            key_field="shortId",
+            name_field="summary",
+            template="- **#{key}** {name} ({basics})"
+        )
 
     @mcp.tool()
     async def entity_changelog(
@@ -670,56 +687,25 @@ def register_entity_tools(mcp: FastMCP):
         return f"Settings updated for {entity_type} {entity_id}."
 
 
-def _format_entity(entity: dict, entity_type: str) -> str:
-    eid = entity.get("shortId", entity.get("id", "?"))
+def _format_entity_full(entity: dict, entity_type: str, extra_fields: list[str] | None = None) -> str:
+    # Use format_mcp_item for standard formatting
+    res = format_mcp_item(
+        entity, entity_type.capitalize(),
+        basic_fields=["entityStatus", "lead", "start", "end", "tags"],
+        extra_fields=extra_fields,
+        key_field="shortId",
+        name_field="summary",
+        template="**{key}**: {name}\n{basics}"
+    )
+
+    # Checklist items (specific logic for entities)
     fields = entity.get("fields", {})
-
-    summary = fields.get("summary", entity.get("summary", ""))
-    description = fields.get("description", entity.get("description", ""))
-    lead = fields.get("lead", entity.get("lead"))
-    status = fields.get("entityStatus", entity.get("entityStatus"))
-    start = fields.get("start", entity.get("start", ""))
-    end = fields.get("end", entity.get("end", ""))
-
-    if isinstance(lead, dict):
-        lead = lead.get("display", lead.get("id", "?"))
-    if isinstance(status, dict):
-        status = status.get("display", status.get("key", "?"))
-
-    lines = [f"**{entity_type.capitalize()} #{eid}**: {summary}"]
-    if status:
-        lines.append(f"Status: {status}")
-    if lead:
-        lines.append(f"Lead: {lead}")
-    if start or end:
-        lines.append(f"Period: {start or '?'} — {end or '?'}")
-    if description:
-        desc = description[:500]
-        if len(description) > 500:
-            desc += "..."
-        lines.append(f"\n{desc}")
-
-    # Checklist items
     checklist = fields.get("checklistItems", [])
     if checklist:
         done = sum(1 for i in checklist if i.get("checked"))
-        lines.append(f"\nChecklist ({done}/{len(checklist)}):")
+        res += f"\n\nChecklist ({done}/{len(checklist)}):"
         for item in checklist:
             mark = "x" if item.get("checked") else " "
-            lines.append(f"  [{mark}] {item.get('text', '?')}")
+            res += f"\n  [{mark}] {item.get('text', '?')}"
 
-    return "\n".join(lines)
-
-
-def _format_entity_short(entity: dict, entity_type: str) -> str:
-    eid = entity.get("shortId", entity.get("id", "?"))
-    fields = entity.get("fields", {})
-    summary = fields.get("summary", entity.get("summary", ""))
-    status = fields.get("entityStatus", entity.get("entityStatus"))
-    if isinstance(status, dict):
-        status = status.get("display", status.get("key", "?"))
-
-    line = f"- **{entity_type.capitalize()} #{eid}** {summary}"
-    if status:
-        line += f" [{status}]"
-    return line
+    return res
