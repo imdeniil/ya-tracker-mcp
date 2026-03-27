@@ -282,19 +282,22 @@ def register_directory_tools(mcp: FastMCP):
     @mcp.tool()
     async def list_global_fields(
         ctx: Context,
+        fields: list[str] | None = None,
         use_cache: bool = True,
     ) -> str:
         """List all global issue fields.
 
         Args:
+            fields: Optional list of additional fields to show (e.g. ["readonly", "category"]). Use ["all"] to show all fields.
             use_cache: Whether to use local cache (default: True)
         """
         tracker = ctx.lifespan_context["tracker"]
-        fields = await manager.get("global_fields", tracker.issues.fields.list, force=not use_cache)
+        data = await manager.get("global_fields", tracker.issues.fields.list, force=not use_cache)
 
         return format_mcp_list(
-            fields, "Global fields", 
+            data, "Global fields", 
             basic_fields=["type"], 
+            extra_fields=fields,
             template="- **{key}** — {name} ({basics})"
         )
 

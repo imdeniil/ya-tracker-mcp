@@ -207,7 +207,7 @@ You need an OAuth token and organization ID:
 | `list_resolutions` | All resolutions (cached) |
 | `create_resolution` | Create resolution (invalidates cache) |
 | `update_resolution` | Update resolution |
-| `list_global_fields` | Global fields (cached) |
+| `list_global_fields` | Global fields (cached, supports `fields`) |
 | `get_field` | Get field details |
 | `create_field` | Create global field |
 | `update_field` | Update global field |
