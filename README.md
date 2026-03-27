@@ -74,9 +74,9 @@ You need an OAuth token and organization ID:
 ### Comments (4)
 | Tool | Description |
 |------|-------------|
-| `add_comment` | Add comment with optional summonees |
-| `list_comments` | List issue comments |
-| `update_comment` | Update comment text |
+| `add_comment` | Add comment (supports `fields`) |
+| `list_comments` | List issue comments (supports `fields`) |
+| `update_comment` | Update comment text (supports `fields`) |
 | `delete_comment` | Delete comment |
 
 ### Status Transitions (2)
@@ -103,7 +103,7 @@ You need an OAuth token and organization ID:
 | `entity_changelog` | Get entity change history |
 | `update_key_results` | Update goal key results |
 | `update_entity_metrics` | Update entity metrics |
-| `list_entity_comments` | List entity comments |
+| `list_entity_comments` | List entity comments (supports `fields`) |
 | `add_entity_comment` | Add comment to entity |
 | `update_entity_comment` | Update entity comment |
 | `delete_entity_comment` | Delete entity comment |
@@ -138,11 +138,11 @@ You need an OAuth token and organization ID:
 ### Worklog (5)
 | Tool | Description |
 |------|-------------|
-| `add_worklog` | Log time (ISO 8601 duration) |
-| `list_worklog` | List worklog entries |
-| `update_worklog` | Update entry |
+| `add_worklog` | Log time (supports `fields`) |
+| `list_worklog` | List worklog entries (supports `fields`) |
+| `update_worklog` | Update entry (supports `fields`) |
 | `delete_worklog` | Delete entry |
-| `search_worklog` | Search worklog across all issues |
+| `search_worklog` | Search worklog entries (supports `fields`) |
 
 ### Checklists (5)
 | Tool | Description |

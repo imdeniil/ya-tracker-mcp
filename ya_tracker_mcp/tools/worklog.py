@@ -1,4 +1,5 @@
 from fastmcp import FastMCP, Context
+from ..utils.formatters import format_mcp_item, format_mcp_list
 
 
 def register_worklog_tools(mcp: FastMCP):
@@ -10,6 +11,7 @@ def register_worklog_tools(mcp: FastMCP):
         start: str,
         duration: str,
         comment: str | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """Add a worklog entry to an issue.
 
@@ -18,6 +20,7 @@ def register_worklog_tools(mcp: FastMCP):
             start: Start time (YYYY-MM-DDThh:mm:ss.sss+hhmm)
             duration: Duration in ISO 8601 (e.g. "PT2H30M", "P1D", "PT45M")
             comment: Optional comment
+            fields: Optional list of fields to show in response.
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -26,28 +29,30 @@ def register_worklog_tools(mcp: FastMCP):
             kwargs["comment"] = comment
 
         entry = await tracker.worklog.create(issue_key, start, duration, **kwargs)
-        return _format_worklog(entry, issue_key)
+        return _format_worklog_full(entry, fields)
 
     @mcp.tool()
     async def list_worklog(
         ctx: Context,
         issue_key: str,
+        fields: list[str] | None = None,
     ) -> str:
         """List worklog entries for an issue.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")
+            fields: Optional list of fields to show.
         """
         tracker = ctx.lifespan_context["tracker"]
         entries = await tracker.worklog.list(issue_key)
 
-        if not entries:
-            return f"No worklog entries for {issue_key}."
-
-        lines = [f"Worklog for {issue_key} ({len(entries)}):\n"]
-        for e in entries:
-            lines.append(_format_worklog(e, issue_key))
-        return "\n".join(lines)
+        return format_mcp_list(
+            entries, f"Worklog for {issue_key}",
+            basic_fields=["duration", "createdBy", "start"],
+            extra_fields=fields,
+            name_field="comment",
+            template="- [{key}] {basics}: {name}"
+        )
 
     @mcp.tool()
     async def update_worklog(
@@ -56,6 +61,7 @@ def register_worklog_tools(mcp: FastMCP):
         worklog_id: str,
         duration: str,
         comment: str | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """Update a worklog entry.
 
@@ -64,6 +70,7 @@ def register_worklog_tools(mcp: FastMCP):
             worklog_id: Worklog entry ID
             duration: New duration in ISO 8601 (e.g. "PT3H")
             comment: New comment
+            fields: Optional list of fields to show in response.
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -72,7 +79,7 @@ def register_worklog_tools(mcp: FastMCP):
             kwargs["comment"] = comment
 
         entry = await tracker.worklog.update(issue_key, worklog_id, duration, **kwargs)
-        return _format_worklog(entry, issue_key)
+        return _format_worklog_full(entry, fields)
 
     @mcp.tool()
     async def delete_worklog(
@@ -96,6 +103,7 @@ def register_worklog_tools(mcp: FastMCP):
         created_by: str | None = None,
         created_at_from: str | None = None,
         created_at_to: str | None = None,
+        fields: list[str] | None = None,
     ) -> str:
         """Search worklog entries across all issues.
 
@@ -103,6 +111,7 @@ def register_worklog_tools(mcp: FastMCP):
             created_by: Filter by author login
             created_at_from: Start date (YYYY-MM-DD or ISO 8601)
             created_at_to: End date (YYYY-MM-DD or ISO 8601)
+            fields: Optional list of additional fields to show.
         """
         tracker = ctx.lifespan_context["tracker"]
         kwargs = {}
@@ -115,37 +124,21 @@ def register_worklog_tools(mcp: FastMCP):
 
         entries = await tracker.worklog.search(**kwargs)
 
-        if not entries:
-            return "No worklog entries found."
-
-        lines = [f"Worklog entries ({len(entries)}):\n"]
-        for entry in entries:
-            wid = entry.get("id", "?")
-            issue = entry.get("issue", {})
-            issue_key = issue.get("key", "?") if isinstance(issue, dict) else str(issue)
-            duration = entry.get("duration", "?")
-            start = entry.get("start", "")
-            comment = entry.get("comment", "")
-            author = entry.get("createdBy", {})
-            if isinstance(author, dict):
-                author = author.get("display", "?")
-            line = f"- [{wid}] {issue_key}: {duration} by {author} at {start}"
-            if comment:
-                line += f" — {comment[:100]}"
-            lines.append(line)
-        return "\n".join(lines)
+        return format_mcp_list(
+            entries, "Worklog entries",
+            basic_fields=["issue", "duration", "createdBy", "start"],
+            extra_fields=fields,
+            name_field="comment",
+            template="- [{key}] {basics}: {name}"
+        )
 
 
-def _format_worklog(entry: dict, issue_key: str) -> str:
-    wid = entry.get("id", "?")
-    duration = entry.get("duration", "?")
-    start = entry.get("start", "")
-    comment = entry.get("comment", "")
-    author = entry.get("createdBy", {})
-    if isinstance(author, dict):
-        author = author.get("display", author.get("id", "?"))
-
-    line = f"- [{wid}] {duration} by {author} at {start}"
-    if comment:
-        line += f" — {comment[:100]}"
-    return line
+def _format_worklog_full(entry: dict, extra_fields: list[str] | None = None) -> str:
+    return format_mcp_item(
+        entry, "Worklog",
+        basic_fields=["duration", "createdBy", "start"],
+        extra_fields=extra_fields,
+        name_field="comment",
+        template="[{key}] {basics}: {name}",
+        description_field=None
+    )

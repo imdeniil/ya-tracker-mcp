@@ -325,29 +325,25 @@ def register_entity_tools(mcp: FastMCP):
         ctx: Context,
         entity_type: str,
         entity_id: str,
+        fields: list[str] | None = None,
     ) -> str:
         """List comments on a project, portfolio, or goal.
 
         Args:
             entity_type: "project", "portfolio", or "goal"
             entity_id: Entity ID
+            fields: Optional list of fields to show. Use ["all"] for all fields.
         """
         tracker = ctx.lifespan_context["tracker"]
         comments = await tracker.entities.comments.list(entity_type, entity_id)
 
-        if not comments:
-            return f"No comments on {entity_type} {entity_id}."
-
-        lines = [f"Comments on {entity_type} {entity_id} ({len(comments)}):\n"]
-        for c in comments:
-            cid = c.get("id", "?")
-            text = c.get("text", "")[:200]
-            author = c.get("createdBy", {})
-            if isinstance(author, dict):
-                author = author.get("display", "?")
-            created = c.get("createdAt", "")
-            lines.append(f"- [{cid}] {author} ({created}): {text}")
-        return "\n".join(lines)
+        return format_mcp_list(
+            comments, f"Comments on {entity_type} {entity_id}",
+            basic_fields=["createdBy", "createdAt"],
+            extra_fields=fields,
+            name_field="text",
+            template="[{key}] {basics}:\n{name}"
+        )
 
     @mcp.tool()
     async def add_entity_comment(
