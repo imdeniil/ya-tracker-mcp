@@ -45,11 +45,19 @@ mcp = FastMCP(
     "Yandex Tracker",
     instructions=(
         "MCP server for Yandex Tracker API\n\n"
-        "Universal parameters available on most tools:\n"
-        '- output_format: "text" (default, markdown) or "json" (structured data)\n'
-        "- full_description: set true to return full description without truncation (default: false, truncates at 1000 chars)\n"
-        '- fields: list of extra fields to show, use ["all"] for all fields\n\n'
-        "Read the tracker://tips resource for important caveats about local fields, query syntax, and bulk operations."
+        "Quick start: get_myself → search_issues → issue_overview/queue_overview\n\n"
+        "Universal parameters on most tools:\n"
+        '- output_format: "text" (markdown) or "json" (structured data)\n'
+        "- full_description: true to disable 1000-char truncation\n"
+        '- fields: extra fields to show, ["all"] for everything\n'
+        "- use_cache: false to bypass cache (directory/list tools)\n\n"
+        "Resources for reference:\n"
+        "- tracker://query-language — query syntax for search_issues\n"
+        "- tracker://tips — local fields, bulk ops, query tricks\n"
+        "- tracker://link-types — relationship values for link_issues\n"
+        "- tracker://field-types — field types for create/update fields\n\n"
+        "Use list_* directory tools (list_statuses, list_priorities, list_issue_types, etc.) "
+        "to discover available values — results are cached."
     ),
     lifespan=lifespan,
 )
