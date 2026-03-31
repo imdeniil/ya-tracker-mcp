@@ -152,6 +152,8 @@ def register_automation_tools(mcp: FastMCP):
     ) -> str:
         """Create a macro in a queue.
 
+        Tip: use {{issue.local.<field_key>}} to reference local fields in body text.
+
         Args:
             queue: Queue key (e.g. "DEV")
             name: Macro name
@@ -225,6 +227,8 @@ def register_automation_tools(mcp: FastMCP):
         active: bool | None = None,
     ) -> str:
         """Create a trigger in a queue.
+
+        Tip: use {{issue.local.<field_key>}} to reference local fields in action templates.
 
         Args:
             queue: Queue key (e.g. "DEV")
@@ -324,6 +328,8 @@ def register_automation_tools(mcp: FastMCP):
         active: bool | None = None,
     ) -> str:
         """Create an autoaction in a queue.
+
+        Tip: use {{issue.local.<field_key>}} to reference local fields in action templates.
 
         Args:
             queue: Queue key (e.g. "DEV")

@@ -184,6 +184,8 @@ def register_issue_tools(mcp: FastMCP):
     ) -> str:
         """Search issues using query language or filters.
 
+        Tip: to search by local field, prefix with queue key: 'QUEUE.FieldName: "value"'.
+
         Args:
             query: Query string (e.g. 'Assignee: me() Resolution: empty()')
             queue: Filter by queue key
@@ -291,6 +293,8 @@ def register_issue_tools(mcp: FastMCP):
         fields: list[str] | None = None,
     ) -> str:
         """Move issue to another queue.
+
+        Warning: local field values are lost when moving to another queue.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")

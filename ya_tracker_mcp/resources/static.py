@@ -139,6 +139,68 @@ API_ERRORS = """# API Errors
 All inherit TrackerAPIError with: status_code, url, method, error_messages
 """
 
+TIPS = """# Yandex Tracker Tips & Caveats
+
+## Local Fields
+
+Local fields are queue-specific custom fields. They work like global fields but with important differences:
+
+### Searching by local fields
+Prefix the field name with the queue key and a dot:
+- `DEVS.Tester: "Ivan Ivanov"`
+- Multi-word field names must be quoted: `DEVS."QA Engineer": "Ivan Ivanov"`
+
+This avoids ambiguity when different queues have local fields with the same name.
+
+### Moving/copying issues
+Local field values are **lost** when an issue is moved or copied to another queue.
+
+### Variables in automations
+In macros, triggers, and autoactions, reference local fields as:
+`{{issue.local.<field_key>}}`
+
+This applies to comment templates, formulas, and HTTP request bodies.
+
+## Query Language Tips
+
+### Relative dates
+- `Created: >today()-1w` — created in the last week
+- `Deadline: <now()+"3d"` — deadline within 3 days
+- Supported units: `m` (minutes), `h` (hours), `d` (days), `w` (weeks)
+
+### Searching by changes
+`Status: changed(to: "In Progress" by: "user" date: >today()-1w)`
+- Parameters `to`, `from`, `by`, `date` are all optional
+
+### Empty vs non-empty
+- `Resolution: empty()` — unresolved issues
+- `Assignee: notEmpty()` — assigned issues
+
+## Bulk Operations
+
+### Rate limits
+Bulk operations (bulk_update, bulk_move, bulk_transition) are async. Use `get_bulk_status` to poll for completion. Large batches may take minutes.
+
+### Bulk update limitations
+- Cannot set fields that require workflow transitions (e.g., status)
+- Use `bulk_transition` for status changes instead
+
+## Entities (Projects, Portfolios, Goals)
+
+### Entity types
+Always pass `entity_type` as one of: `project`, `portfolio`, `goal`.
+
+### Goal key results
+Use `update_key_results` to manage OKR-style key results on goals. Each key result needs `title` and optionally `unit`, `target`, `current`.
+
+## Checklists
+
+### Checklist vs subtasks
+- Checklists are lightweight (no separate issue key)
+- Subtasks are full issues linked via "is subtask for"
+- Use checklists for simple to-do lists, subtasks for trackable work items
+"""
+
 
 def register_resources(mcp: FastMCP):
 
@@ -171,3 +233,8 @@ def register_resources(mcp: FastMCP):
     def api_errors() -> str:
         """API error codes and exception types."""
         return API_ERRORS
+
+    @mcp.resource("tracker://tips")
+    def tips() -> str:
+        """Tips and caveats for using Yandex Tracker: local fields, query tricks, bulk ops, entities."""
+        return TIPS
