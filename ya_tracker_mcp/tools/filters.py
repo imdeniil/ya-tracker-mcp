@@ -1,3 +1,5 @@
+import json
+
 from fastmcp import FastMCP, Context
 
 
@@ -33,14 +35,19 @@ def register_filter_tools(mcp: FastMCP):
     async def get_filter(
         ctx: Context,
         filter_id: str,
+        output_format: str = "text",
     ) -> str:
         """Get a saved filter by ID.
 
         Args:
             filter_id: Filter ID
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         f = await tracker.filters.get(filter_id)
+
+        if output_format == "json":
+            return json.dumps(f, ensure_ascii=False, default=str)
 
         fid = f.get("id", "?")
         name = f.get("name", "")

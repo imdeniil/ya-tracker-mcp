@@ -1,3 +1,4 @@
+import json
 from fastmcp import FastMCP, Context
 
 
@@ -7,17 +8,22 @@ def register_transition_tools(mcp: FastMCP):
     async def list_transitions(
         ctx: Context,
         issue_key: str,
+        output_format: str = "text",
     ) -> str:
         """List available status transitions for an issue.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         transitions = await tracker.issues.transitions.list(issue_key)
 
         if not transitions:
             return f"No transitions available for {issue_key}."
+
+        if output_format == "json":
+            return json.dumps(transitions, ensure_ascii=False, default=str)
 
         lines = [f"Available transitions for {issue_key}:\n"]
         for t in transitions:
@@ -34,6 +40,7 @@ def register_transition_tools(mcp: FastMCP):
         issue_key: str,
         transition_id: str,
         comment: str | None = None,
+        output_format: str = "text",
     ) -> str:
         """Execute a status transition on an issue.
 
@@ -43,6 +50,7 @@ def register_transition_tools(mcp: FastMCP):
             issue_key: Issue key (e.g. "DEV-123")
             transition_id: Transition ID (from list_transitions)
             comment: Optional comment for the transition
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -53,10 +61,12 @@ def register_transition_tools(mcp: FastMCP):
         result = await tracker.issues.transitions.update(
             issue_key, transition_id, **kwargs
         )
-        return f"Transition '{transition_id}' executed on {issue_key}.\n{_format_transition_result(result)}"
+        return f"Transition '{transition_id}' executed on {issue_key}.\n{_format_transition_result(result, output_format=output_format)}"
 
 
-def _format_transition_result(result) -> str:
+def _format_transition_result(result, output_format: str = "text") -> str:
+    if output_format == "json":
+        return json.dumps(result, ensure_ascii=False, default=str)
     if isinstance(result, list):
         return f"Transitions remaining: {len(result)}"
     if isinstance(result, dict):

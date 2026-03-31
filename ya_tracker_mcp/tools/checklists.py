@@ -1,3 +1,5 @@
+import json
+
 from fastmcp import FastMCP, Context
 
 
@@ -7,17 +9,24 @@ def register_checklist_tools(mcp: FastMCP):
     async def list_checklist(
         ctx: Context,
         issue_key: str,
+        output_format: str = "text",
     ) -> str:
         """List checklist items of an issue.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         items = await tracker.issues.checklists.list(issue_key)
 
         if not items:
+            if output_format == "json":
+                return "[]"
             return f"No checklist items on {issue_key}."
+
+        if output_format == "json":
+            return json.dumps(items, ensure_ascii=False, default=str)
 
         done = sum(1 for i in items if i.get("checked"))
         lines = [f"Checklist for {issue_key} ({done}/{len(items)}):\n"]

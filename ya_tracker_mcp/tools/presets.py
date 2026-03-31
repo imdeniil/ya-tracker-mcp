@@ -1,3 +1,4 @@
+import json
 import os
 
 import yaml
@@ -23,11 +24,23 @@ def _save_presets(presets: dict):
 def register_preset_tools(mcp: FastMCP):
 
     @mcp.tool()
-    async def list_presets(ctx: Context) -> str:
-        """List available task presets with their descriptions."""
+    async def list_presets(
+        ctx: Context,
+        output_format: str = "text",
+    ) -> str:
+        """List available task presets with their descriptions.
+
+        Args:
+            output_format: Response format: "text" (default, markdown) or "json"
+        """
         presets = _load_presets()
         if not presets:
+            if output_format == "json":
+                return "{}"
             return "No presets configured. Edit config/presets.yaml to add presets."
+
+        if output_format == "json":
+            return json.dumps(presets, ensure_ascii=False, default=str)
 
         lines = ["Available presets:\n"]
         for key, p in presets.items():
@@ -40,16 +53,21 @@ def register_preset_tools(mcp: FastMCP):
     async def get_preset(
         ctx: Context,
         preset_name: str,
+        output_format: str = "text",
     ) -> str:
         """Get preset details: params, template, and rules.
 
         Args:
             preset_name: Preset key (from list_presets)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         presets = _load_presets()
         preset = presets.get(preset_name)
         if not preset:
             return f"Preset '{preset_name}' not found. Use list_presets to see available presets."
+
+        if output_format == "json":
+            return json.dumps(preset, ensure_ascii=False, default=str)
 
         lines = [f"**{preset.get('name', preset_name)}**\n"]
 

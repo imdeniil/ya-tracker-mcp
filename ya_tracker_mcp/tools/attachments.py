@@ -1,3 +1,5 @@
+import json
+
 from fastmcp import FastMCP, Context
 
 
@@ -7,17 +9,24 @@ def register_attachment_tools(mcp: FastMCP):
     async def list_attachments(
         ctx: Context,
         issue_key: str,
+        output_format: str = "text",
     ) -> str:
         """List attachments of an issue.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         attachments = await tracker.issues.attachments.list(issue_key)
 
         if not attachments:
+            if output_format == "json":
+                return "[]"
             return f"No attachments on {issue_key}."
+
+        if output_format == "json":
+            return json.dumps(attachments, ensure_ascii=False, default=str)
 
         lines = [f"Attachments on {issue_key} ({len(attachments)}):\n"]
         for a in attachments:

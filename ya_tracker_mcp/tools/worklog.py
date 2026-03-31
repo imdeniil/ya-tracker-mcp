@@ -1,3 +1,4 @@
+import json
 from fastmcp import FastMCP, Context
 from ..utils.formatters import format_mcp_item, format_mcp_list
 
@@ -12,6 +13,8 @@ def register_worklog_tools(mcp: FastMCP):
         duration: str,
         comment: str | None = None,
         fields: list[str] | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Add a worklog entry to an issue.
 
@@ -21,6 +24,8 @@ def register_worklog_tools(mcp: FastMCP):
             duration: Duration in ISO 8601 (e.g. "PT2H30M", "P1D", "PT45M")
             comment: Optional comment
             fields: Optional list of fields to show in response.
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -29,19 +34,21 @@ def register_worklog_tools(mcp: FastMCP):
             kwargs["comment"] = comment
 
         entry = await tracker.worklog.create(issue_key, start, duration, **kwargs)
-        return _format_worklog_full(entry, fields)
+        return _format_worklog_full(entry, fields, output_format=output_format, full_description=full_description)
 
     @mcp.tool()
     async def list_worklog(
         ctx: Context,
         issue_key: str,
         fields: list[str] | None = None,
+        output_format: str = "text",
     ) -> str:
         """List worklog entries for an issue.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")
             fields: Optional list of fields to show.
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         entries = await tracker.worklog.list(issue_key)
@@ -51,7 +58,8 @@ def register_worklog_tools(mcp: FastMCP):
             basic_fields=["duration", "createdBy", "start"],
             extra_fields=fields,
             name_field="comment",
-            template="- [{key}] {basics}: {name}"
+            template="- [{key}] {basics}: {name}",
+            output_format=output_format,
         )
 
     @mcp.tool()
@@ -62,6 +70,8 @@ def register_worklog_tools(mcp: FastMCP):
         duration: str,
         comment: str | None = None,
         fields: list[str] | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Update a worklog entry.
 
@@ -71,6 +81,8 @@ def register_worklog_tools(mcp: FastMCP):
             duration: New duration in ISO 8601 (e.g. "PT3H")
             comment: New comment
             fields: Optional list of fields to show in response.
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -79,7 +91,7 @@ def register_worklog_tools(mcp: FastMCP):
             kwargs["comment"] = comment
 
         entry = await tracker.worklog.update(issue_key, worklog_id, duration, **kwargs)
-        return _format_worklog_full(entry, fields)
+        return _format_worklog_full(entry, fields, output_format=output_format, full_description=full_description)
 
     @mcp.tool()
     async def delete_worklog(
@@ -104,6 +116,7 @@ def register_worklog_tools(mcp: FastMCP):
         created_at_from: str | None = None,
         created_at_to: str | None = None,
         fields: list[str] | None = None,
+        output_format: str = "text",
     ) -> str:
         """Search worklog entries across all issues.
 
@@ -112,6 +125,7 @@ def register_worklog_tools(mcp: FastMCP):
             created_at_from: Start date (YYYY-MM-DD or ISO 8601)
             created_at_to: End date (YYYY-MM-DD or ISO 8601)
             fields: Optional list of additional fields to show.
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         kwargs = {}
@@ -129,16 +143,24 @@ def register_worklog_tools(mcp: FastMCP):
             basic_fields=["issue", "duration", "createdBy", "start"],
             extra_fields=fields,
             name_field="comment",
-            template="- [{key}] {basics}: {name}"
+            template="- [{key}] {basics}: {name}",
+            output_format=output_format,
         )
 
 
-def _format_worklog_full(entry: dict, extra_fields: list[str] | None = None) -> str:
+def _format_worklog_full(
+    entry: dict,
+    extra_fields: list[str] | None = None,
+    output_format: str = "text",
+    full_description: bool = False,
+) -> str:
     return format_mcp_item(
         entry, "Worklog",
         basic_fields=["duration", "createdBy", "start"],
         extra_fields=extra_fields,
         name_field="comment",
         template="[{key}] {basics}: {name}",
-        description_field=None
+        description_field=None,
+        output_format=output_format,
+        full_description=full_description,
     )

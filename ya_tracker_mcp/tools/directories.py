@@ -1,3 +1,5 @@
+import json
+
 from fastmcp import FastMCP, Context
 from ..utils.directory_manager import manager
 from ..utils.formatters import format_mcp_list
@@ -9,11 +11,13 @@ def register_directory_tools(mcp: FastMCP):
     async def list_issue_types(
         ctx: Context,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List all issue types in the organization.
 
         Args:
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         types = await manager.get("issue_types", tracker.issues.types.list, force=not use_cache)
@@ -22,18 +26,21 @@ def register_directory_tools(mcp: FastMCP):
             types, "Issue types", 
             basic_fields=[], 
             key_field="key", 
-            template="- **{key}** — {name}"
+            template="- **{key}** — {name}",
+            output_format=output_format,
         )
 
     @mcp.tool()
     async def list_statuses(
         ctx: Context,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List all issue statuses in the organization.
 
         Args:
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         statuses = await manager.get("statuses", tracker.issues.statuses.list, force=not use_cache)
@@ -42,18 +49,21 @@ def register_directory_tools(mcp: FastMCP):
             statuses, "Statuses", 
             basic_fields=["type"], 
             key_field="key", 
-            template="- **{key}** — {name} ({basics})"
+            template="- **{key}** — {name} ({basics})",
+            output_format=output_format,
         )
 
     @mcp.tool()
     async def list_priorities(
         ctx: Context,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List all issue priorities in the organization.
 
         Args:
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         priorities = await manager.get("priorities", tracker.issues.priorities.list, force=not use_cache)
@@ -62,18 +72,21 @@ def register_directory_tools(mcp: FastMCP):
             priorities, "Priorities", 
             basic_fields=[], 
             key_field="key", 
-            template="- **{key}** — {name}"
+            template="- **{key}** — {name}",
+            output_format=output_format,
         )
 
     @mcp.tool()
     async def list_resolutions(
         ctx: Context,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List all issue resolutions in the organization.
 
         Args:
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         resolutions = await manager.get("resolutions", tracker.issues.resolutions.list, force=not use_cache)
@@ -82,7 +95,8 @@ def register_directory_tools(mcp: FastMCP):
             resolutions, "Resolutions", 
             basic_fields=[], 
             key_field="key", 
-            template="- **{key}** — {name}"
+            template="- **{key}** — {name}",
+            output_format=output_format,
         )
 
     @mcp.tool()
@@ -91,6 +105,7 @@ def register_directory_tools(mcp: FastMCP):
         queue_key: str,
         fields: list[str] | None = None,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List fields (including local fields) of a queue.
 
@@ -98,6 +113,7 @@ def register_directory_tools(mcp: FastMCP):
             queue_key: Queue key (e.g. "DEV")
             fields: Optional list of additional fields (e.g. ["optionsProvider", "category"])
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         
@@ -113,7 +129,8 @@ def register_directory_tools(mcp: FastMCP):
             basic_fields=["type"], 
             extra_fields=fields,
             key_field="id",
-            template="- **{key}** — {name} ({basics})"
+            template="- **{key}** — {name} ({basics})",
+            output_format=output_format,
         )
 
     @mcp.tool()
@@ -121,12 +138,14 @@ def register_directory_tools(mcp: FastMCP):
         ctx: Context,
         queue_key: str,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List tags used in a queue.
 
         Args:
             queue_key: Queue key (e.g. "DEV")
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         
@@ -138,7 +157,12 @@ def register_directory_tools(mcp: FastMCP):
         )
 
         if not tags:
+            if output_format == "json":
+                return "[]"
             return f"No tags in queue {queue_key}."
+
+        if output_format == "json":
+            return json.dumps(tags, ensure_ascii=False, default=str)
 
         return f"Tags in {queue_key}: {', '.join(tags)}"
 
@@ -147,12 +171,14 @@ def register_directory_tools(mcp: FastMCP):
         ctx: Context,
         fields: list[str] | None = None,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List all components in the organization.
 
         Args:
             fields: Optional list of additional fields to show (e.g. ["description", "assignAuto"]). Use ["all"] to show all fields.
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         components = await manager.get("components", tracker.components.list, force=not use_cache)
@@ -160,7 +186,8 @@ def register_directory_tools(mcp: FastMCP):
         return format_mcp_list(
             components, "Components", 
             basic_fields=["queue", "lead"], 
-            extra_fields=fields
+            extra_fields=fields,
+            output_format=output_format,
         )
 
     @mcp.tool()
@@ -168,12 +195,14 @@ def register_directory_tools(mcp: FastMCP):
         ctx: Context,
         component_id: int,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """Get detailed information about a specific component by ID.
 
         Args:
             component_id: Numerical ID of the component
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         components = await manager.get("components", tracker.components.list, force=not use_cache)
@@ -188,6 +217,9 @@ def register_directory_tools(mcp: FastMCP):
             
         if not component:
             return f"Component with ID {component_id} not found."
+
+        if output_format == "json":
+            return json.dumps(component, ensure_ascii=False, default=str)
 
         name = component.get("name", "?")
         lines = [f"### Component: {name} [{component_id}]"]
@@ -284,12 +316,14 @@ def register_directory_tools(mcp: FastMCP):
         ctx: Context,
         fields: list[str] | None = None,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List all global issue fields.
 
         Args:
             fields: Optional list of additional fields to show (e.g. ["readonly", "category"]). Use ["all"] to show all fields.
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         data = await manager.get("global_fields", tracker.issues.fields.list, force=not use_cache)
@@ -298,18 +332,21 @@ def register_directory_tools(mcp: FastMCP):
             data, "Global fields", 
             basic_fields=["type"], 
             extra_fields=fields,
-            template="- **{key}** — {name} ({basics})"
+            template="- **{key}** — {name} ({basics})",
+            output_format=output_format,
         )
 
     @mcp.tool()
     async def list_field_categories(
         ctx: Context,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List all field categories.
 
         Args:
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         categories = await manager.get("field_categories", tracker.issues.fields.categories.list, force=not use_cache)
@@ -317,17 +354,30 @@ def register_directory_tools(mcp: FastMCP):
         return format_mcp_list(
             categories, "Field categories", 
             basic_fields=[], 
-            template="- [{key}] **{name}**"
+            template="- [{key}] **{name}**",
+            output_format=output_format,
         )
 
     # --- Cache Management Tools ---
 
     @mcp.tool()
-    async def get_cache_status(ctx: Context) -> str:
-        """Show status of directories cache (TTL, last updated, record count)."""
+    async def get_cache_status(
+        ctx: Context,
+        output_format: str = "text",
+    ) -> str:
+        """Show status of directories cache (TTL, last updated, record count).
+
+        Args:
+            output_format: Response format: "text" (default, markdown) or "json"
+        """
         status = manager.get_status()
         if not status:
+            if output_format == "json":
+                return "[]"
             return "Cache is empty."
+
+        if output_format == "json":
+            return json.dumps(status, ensure_ascii=False, default=str)
 
         lines = ["### Directory Cache Status\n"]
         lines.append("| Entity | Records | Last Updated | TTL (s) | Expires In |")

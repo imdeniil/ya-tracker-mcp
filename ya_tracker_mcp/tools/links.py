@@ -1,3 +1,4 @@
+import json
 from fastmcp import FastMCP, Context
 
 
@@ -9,6 +10,7 @@ def register_link_tools(mcp: FastMCP):
         issue_key: str,
         relationship: str,
         target: str,
+        output_format: str = "text",
     ) -> str:
         """Create a link between two issues.
 
@@ -18,28 +20,36 @@ def register_link_tools(mcp: FastMCP):
                 "is subtask for", "is parent task for", "duplicates", "is duplicated by",
                 "is epic of", "has epic"
             target: Target issue key (e.g. "DEV-456")
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         link = await tracker.issues.links.create(
             issue_key, relationship, target
         )
+        if output_format == "json":
+            return json.dumps(link, ensure_ascii=False, default=str)
         return _format_link(link)
 
     @mcp.tool()
     async def list_links(
         ctx: Context,
         issue_key: str,
+        output_format: str = "text",
     ) -> str:
         """List all links of an issue.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         links = await tracker.issues.links.list(issue_key)
 
         if not links:
             return f"No links on {issue_key}."
+
+        if output_format == "json":
+            return json.dumps(links, ensure_ascii=False, default=str)
 
         lines = [f"Links on {issue_key} ({len(links)}):\n"]
         for link in links:

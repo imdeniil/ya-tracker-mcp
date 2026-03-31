@@ -1,3 +1,4 @@
+import json
 from fastmcp import FastMCP, Context
 from ..utils.directory_manager import manager
 from ..utils.formatters import format_mcp_list
@@ -11,6 +12,7 @@ def register_queue_tools(mcp: FastMCP):
         fields: list[str] | None = None,
         per_page: int | None = None,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List all available queues.
 
@@ -18,6 +20,7 @@ def register_queue_tools(mcp: FastMCP):
             fields: Optional list of additional fields (e.g. ["description", "issueTypesConfig"])
             per_page: Results per page (if not using cache)
             use_cache: Whether to use local cache (default: True). Note: per_page is ignored if using cache.
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -32,7 +35,8 @@ def register_queue_tools(mcp: FastMCP):
             basic_fields=["lead"],
             extra_fields=fields,
             key_field="key",
-            template="- **{key}** — {name} ({basics})"
+            template="- **{key}** — {name} ({basics})",
+            output_format=output_format,
         )
 
     @mcp.tool()
@@ -40,16 +44,20 @@ def register_queue_tools(mcp: FastMCP):
         ctx: Context,
         queue_key: str,
         expand: str | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Get queue details.
 
         Args:
             queue_key: Queue key (e.g. "DEV")
             expand: Expand: "projects", "components", "versions", "all"
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
         queue = await tracker.queues.get(queue_key, expand=expand)
-        return _format_queue(queue)
+        return _format_queue(queue, output_format=output_format, full_description=full_description)
 
     @mcp.tool()
     async def create_queue(
@@ -61,6 +69,8 @@ def register_queue_tools(mcp: FastMCP):
         default_priority: str,
         issue_types_config: list[dict],
         description: str | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Create a new queue.
 
@@ -72,6 +82,8 @@ def register_queue_tools(mcp: FastMCP):
             default_priority: Default priority key
             issue_types_config: Issue types config (list of dicts with issueType and workflow keys)
             description: Queue description
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
         kwargs = {}
@@ -85,7 +97,7 @@ def register_queue_tools(mcp: FastMCP):
         # Invalidate queues cache
         await manager.get("queues", tracker.queues.list, force=True)
         
-        return _format_queue(queue)
+        return _format_queue(queue, output_format=output_format, full_description=full_description)
 
     @mcp.tool()
     async def delete_queue(
@@ -127,11 +139,13 @@ def register_queue_tools(mcp: FastMCP):
     async def list_queue_versions(
         ctx: Context,
         queue_key: str,
+        output_format: str = "text",
     ) -> str:
         """List versions of a queue.
 
         Args:
             queue_key: Queue key (e.g. "DEV")
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         
@@ -144,6 +158,9 @@ def register_queue_tools(mcp: FastMCP):
 
         if not versions:
             return f"No versions in queue {queue_key}."
+
+        if output_format == "json":
+            return json.dumps(versions, ensure_ascii=False, default=str)
 
         lines = [f"Versions in {queue_key}:\n"]
         for v in versions:
@@ -217,15 +234,20 @@ def register_queue_tools(mcp: FastMCP):
         ctx: Context,
         queue_key: str,
         user_id: str,
+        output_format: str = "text",
     ) -> str:
         """Get user permissions for a queue.
 
         Args:
             queue_key: Queue key
             user_id: User ID or login
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         perms = await tracker.queues.permissions.get_user(queue_key, user_id)
+
+        if output_format == "json":
+            return json.dumps(perms, ensure_ascii=False, default=str)
         
         lines = [f"Permissions for user {user_id} in {queue_key}:\n"]
         for p in perms:
@@ -261,7 +283,10 @@ def register_queue_tools(mcp: FastMCP):
         return f"Permissions for queue {queue_key} updated."
 
 
-def _format_queue(q: dict) -> str:
+def _format_queue(q: dict, output_format: str = "text", full_description: bool = False) -> str:
+    if output_format == "json":
+        return json.dumps(q, ensure_ascii=False, default=str)
+
     key = q.get("key", "?")
     name = q.get("name", "")
     lead = q.get("lead", {})
@@ -275,6 +300,8 @@ def _format_queue(q: dict) -> str:
     
     desc = q.get("description")
     if desc:
+        if not full_description and len(desc) > 500:
+            desc = desc[:500] + "..."
         lines.append(f"\nDescription:\n{desc}")
         
     lines.append(f"\nhttps://tracker.yandex.ru/manager/queues/{key}")

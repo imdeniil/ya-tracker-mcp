@@ -1,3 +1,5 @@
+import json
+
 from fastmcp import FastMCP, Context
 
 
@@ -87,14 +89,19 @@ def register_bulk_tools(mcp: FastMCP):
     async def get_bulk_status(
         ctx: Context,
         bulk_change_id: str,
+        output_format: str = "text",
     ) -> str:
         """Check the status of a bulk operation.
 
         Args:
             bulk_change_id: Bulk operation ID (from bulk_update/bulk_move/bulk_transition)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         result = await tracker.issues.bulk.get_status(bulk_change_id)
+
+        if output_format == "json":
+            return json.dumps(result, ensure_ascii=False, default=str)
 
         status = result.get("status", "?") if isinstance(result, dict) else str(result)
         total = result.get("totalCount", "?") if isinstance(result, dict) else "?"
@@ -110,17 +117,24 @@ def register_bulk_tools(mcp: FastMCP):
     async def get_bulk_failed_issues(
         ctx: Context,
         bulk_change_id: str,
+        output_format: str = "text",
     ) -> str:
         """Get list of issues that failed in a bulk operation.
 
         Args:
             bulk_change_id: Bulk operation ID
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         result = await tracker.issues.bulk.get_failed_issues(bulk_change_id)
 
         if not result:
+            if output_format == "json":
+                return "[]"
             return f"No failed issues in bulk operation {bulk_change_id}."
+
+        if output_format == "json":
+            return json.dumps(result, ensure_ascii=False, default=str)
 
         lines = [f"Failed issues in bulk {bulk_change_id}:\n"]
         if isinstance(result, list):

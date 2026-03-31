@@ -1,6 +1,8 @@
 from fastmcp import FastMCP, Context
 from ..utils.formatters import format_mcp_item, format_mcp_list
 
+import json
+
 
 def register_issue_tools(mcp: FastMCP):
 
@@ -23,6 +25,8 @@ def register_issue_tools(mcp: FastMCP):
         original_estimation: str | None = None,
         extra_fields: dict | None = None,
         fields: list[str] | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Create a new issue in Yandex Tracker.
 
@@ -43,6 +47,8 @@ def register_issue_tools(mcp: FastMCP):
             original_estimation: Original estimation in ISO 8601 (e.g. "PT2H", "P1D")
             extra_fields: Additional/custom/local fields as dict (e.g. {"coAssignees": ["user1"], "myCustomField": "value"})
             fields: Optional list of fields to show in response. Use ["all"] for all fields.
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -80,7 +86,7 @@ def register_issue_tools(mcp: FastMCP):
             **kwargs,
         )
 
-        return _format_issue_full(issue, fields)
+        return _format_issue_full(issue, fields, output_format, full_description)
 
     @mcp.tool()
     async def get_issue(
@@ -88,6 +94,8 @@ def register_issue_tools(mcp: FastMCP):
         issue_key: str,
         expand: str | None = None,
         fields: list[str] | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Get issue details by key.
 
@@ -95,10 +103,12 @@ def register_issue_tools(mcp: FastMCP):
             issue_key: Issue key (e.g. "DEV-123")
             expand: Expand additional fields: "transitions", "attachments", or "transitions,attachments"
             fields: Optional list of fields to show. Use ["all"] for all fields.
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
         issue = await tracker.issues.get(issue_key, expand=expand)
-        return _format_issue_full(issue, fields)
+        return _format_issue_full(issue, fields, output_format, full_description)
 
     @mcp.tool()
     async def update_issue(
@@ -118,6 +128,8 @@ def register_issue_tools(mcp: FastMCP):
         story_points: float | None = None,
         extra_fields: dict | None = None,
         fields: list[str] | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Update an existing issue.
 
@@ -137,6 +149,8 @@ def register_issue_tools(mcp: FastMCP):
             story_points: Story points
             extra_fields: Additional/custom/local fields as dict (e.g. {"coAssignees": ["user1"], "myCustomField": "value"})
             fields: Optional list of fields to show in response. Use ["all"] for all fields.
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -169,7 +183,7 @@ def register_issue_tools(mcp: FastMCP):
             kwargs.update(extra_fields)
 
         issue = await tracker.issues.update(issue_key, **kwargs)
-        return _format_issue_full(issue, fields)
+        return _format_issue_full(issue, fields, output_format, full_description)
 
     @mcp.tool()
     async def search_issues(
@@ -181,6 +195,7 @@ def register_issue_tools(mcp: FastMCP):
         per_page: int | None = None,
         page: int | None = None,
         fields: list[str] | None = None,
+        output_format: str = "text",
     ) -> str:
         """Search issues using query language or filters.
 
@@ -194,6 +209,7 @@ def register_issue_tools(mcp: FastMCP):
             per_page: Results per page (default 50)
             page: Page number (1-based)
             fields: Optional list of additional fields to show. Use ["all"] for all fields.
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -219,21 +235,26 @@ def register_issue_tools(mcp: FastMCP):
             extra_fields=fields,
             key_field="key",
             name_field="summary",
-            template="- **{key}** [{basics}] {name}"
+            template="- **{key}** [{basics}] {name}",
+            output_format=output_format,
         )
 
     @mcp.tool()
     async def count_issues(
         ctx: Context,
         query: str | None = None,
+        output_format: str = "text",
     ) -> str:
         """Count issues matching a query.
 
         Args:
             query: Query string (e.g. 'Queue: DEV Resolution: empty()')
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         count = await tracker.issues.count(query=query)
+        if output_format == "json":
+            return json.dumps({"count": count}, ensure_ascii=False)
         return f"Count: {count}"
 
     @mcp.tool()
@@ -242,6 +263,7 @@ def register_issue_tools(mcp: FastMCP):
         issue_key: str,
         field: str | None = None,
         per_page: int | None = None,
+        output_format: str = "text",
     ) -> str:
         """Get issue changelog (history of changes).
 
@@ -249,6 +271,7 @@ def register_issue_tools(mcp: FastMCP):
             issue_key: Issue key (e.g. "DEV-123")
             field: Filter by field name (e.g. "status", "assignee")
             per_page: Results per page
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         kwargs = {}
@@ -258,6 +281,9 @@ def register_issue_tools(mcp: FastMCP):
             kwargs["per_page"] = per_page
 
         changes = await tracker.issues.changelog(issue_key, **kwargs)
+
+        if output_format == "json":
+            return json.dumps(changes, ensure_ascii=False, default=str)
 
         if not changes:
             return f"No changelog entries for {issue_key}."
@@ -291,6 +317,8 @@ def register_issue_tools(mcp: FastMCP):
         issue_key: str,
         queue: str,
         fields: list[str] | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Move issue to another queue.
 
@@ -300,23 +328,39 @@ def register_issue_tools(mcp: FastMCP):
             issue_key: Issue key (e.g. "DEV-123")
             queue: Target queue key (e.g. "SUPPORT")
             fields: Optional list of fields to show in response.
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
         issue = await tracker.issues.move(issue_key, queue)
-        return _format_issue_full(issue, fields)
+        return _format_issue_full(issue, fields, output_format, full_description)
 
 
-def _format_issue_full(issue: dict, extra_fields: list[str] | None = None) -> str:
+def _format_issue_full(
+    issue: dict,
+    extra_fields: list[str] | None = None,
+    output_format: str = "text",
+    full_description: bool = False,
+) -> str:
     res = format_mcp_item(
         issue, "Issue",
         basic_fields=["status", "type", "priority", "assignee", "createdAt", "updatedAt", "deadline", "tags", "storyPoints"],
         extra_fields=extra_fields,
         key_field="key",
         name_field="summary",
-        template="**{key}**: {name}\n{basics}"
+        template="**{key}**: {name}\n{basics}",
+        output_format=output_format,
+        full_description=full_description,
     )
-    
-    # Transitions if expanded
+
+    if output_format == "json":
+        obj = json.loads(res)
+        transitions = issue.get("transitions")
+        if transitions:
+            obj["transitions"] = [t.get("display", t.get("id", "?")) for t in transitions]
+        obj["url"] = f"https://tracker.yandex.ru/{issue.get('key', '?')}"
+        return json.dumps(obj, ensure_ascii=False, default=str)
+
     transitions = issue.get("transitions")
     if transitions:
         trans_names = [t.get("display", t.get("id", "?")) for t in transitions]

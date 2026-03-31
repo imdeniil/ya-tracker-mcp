@@ -190,6 +190,8 @@ You need an OAuth token and organization ID:
 
 > **Universal Parameters:** Most `list_*`, `get_*` and `search_*` tools (Issues, Entities, Queues, Components, Boards, Sprints, Users, Fields) now support:
 > - `fields: list[str]` — Additional fields to show. Use `["all"]` to see every field available in the API.
+> - `output_format: str` — Response format: `"text"` (default, markdown) or `"json"` (structured data for programmatic use).
+> - `full_description: bool` — Set to `true` to return full description without truncation (default: `false`, truncates at 1000 chars).
 > - `use_cache: bool` — (For cached tools) Set to `False` to bypass local cache and fetch fresh data from Yandex Tracker.
 
 ### Directories — Reference Data (27)
@@ -302,7 +304,7 @@ You need an OAuth token and organization ID:
 | `get_team_member` | Member details (areas, queues) |
 | `find_assignee` | Find assignee by area/queue |
 
-## Resources (6)
+## Resources (7)
 
 | Resource | Description |
 |----------|-------------|
@@ -312,6 +314,7 @@ You need an OAuth token and organization ID:
 | `tracker://entity-statuses` | Entity status values |
 | `tracker://field-types` | Field types with Java paths |
 | `tracker://api-errors` | API error codes |
+| `tracker://tips` | Tips & caveats (local fields, bulk ops, query tricks) |
 
 ## Prompts (4)
 

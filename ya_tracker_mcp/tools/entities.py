@@ -1,6 +1,8 @@
 from fastmcp import FastMCP, Context
 from ..utils.formatters import format_mcp_item, format_mcp_list
 
+import json
+
 
 def register_entity_tools(mcp: FastMCP):
 
@@ -20,6 +22,8 @@ def register_entity_tools(mcp: FastMCP):
         parent_entity: str | None = None,
         entity_status: str | None = None,
         fields: list[str] | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Create a project, portfolio, or goal.
 
@@ -37,6 +41,8 @@ def register_entity_tools(mcp: FastMCP):
             parent_entity: Parent entity ID (as string)
             entity_status: Status (e.g. "in_progress", "draft", "at_risk")
             fields: Optional list of fields to show in response.
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -63,7 +69,7 @@ def register_entity_tools(mcp: FastMCP):
             kwargs["entity_status"] = entity_status
 
         entity = await tracker.entities.create(entity_type, summary, **kwargs)
-        return _format_entity_full(entity, entity_type, fields)
+        return _format_entity_full(entity, entity_type, fields, output_format, full_description)
 
     @mcp.tool()
     async def get_entity(
@@ -71,6 +77,8 @@ def register_entity_tools(mcp: FastMCP):
         entity_type: str,
         entity_id: str,
         fields: list[str] | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Get a project, portfolio, or goal by ID.
 
@@ -78,16 +86,17 @@ def register_entity_tools(mcp: FastMCP):
             entity_type: "project", "portfolio", or "goal"
             entity_id: Entity ID
             fields: Optional list of fields to return. Use ["all"] for all fields.
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
-        
+
         api_fields = None
         if fields and "all" not in fields:
-            # Note: entities API expects comma-separated string
             api_fields = ",".join(fields)
 
         entity = await tracker.entities.get(entity_type, entity_id, fields=api_fields)
-        return _format_entity_full(entity, entity_type, fields)
+        return _format_entity_full(entity, entity_type, fields, output_format, full_description)
 
     @mcp.tool()
     async def update_entity(
@@ -106,6 +115,8 @@ def register_entity_tools(mcp: FastMCP):
         entity_status: str | None = None,
         comment: str | None = None,
         fields: list[str] | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Update a project, portfolio, or goal.
 
@@ -124,6 +135,8 @@ def register_entity_tools(mcp: FastMCP):
             entity_status: New status
             comment: Comment about the change
             fields: Optional list of fields to show in response.
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -152,7 +165,7 @@ def register_entity_tools(mcp: FastMCP):
             kwargs["comment"] = comment
 
         entity = await tracker.entities.update(entity_type, entity_id, **kwargs)
-        return _format_entity_full(entity, entity_type, fields)
+        return _format_entity_full(entity, entity_type, fields, output_format, full_description)
 
     @mcp.tool()
     async def delete_entity(
@@ -181,6 +194,7 @@ def register_entity_tools(mcp: FastMCP):
         per_page: int | None = None,
         page: int | None = None,
         root_only: bool | None = None,
+        output_format: str = "text",
     ) -> str:
         """Search projects, portfolios, or goals.
 
@@ -191,6 +205,7 @@ def register_entity_tools(mcp: FastMCP):
             per_page: Results per page
             page: Page number
             root_only: Only return top-level entities
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -198,7 +213,6 @@ def register_entity_tools(mcp: FastMCP):
         if input is not None:
             kwargs["input"] = input
         if fields is not None:
-            # API expects comma-separated string for fields
             if "all" not in fields:
                 kwargs["fields"] = ",".join(fields)
         if per_page is not None:
@@ -211,9 +225,10 @@ def register_entity_tools(mcp: FastMCP):
         result = await tracker.entities.search(entity_type, **kwargs)
 
         values = result.get("values", []) if isinstance(result, dict) else result
-        hits = result.get("hits", "?") if isinstance(result, dict) else len(values)
 
         if not values:
+            if output_format == "json":
+                return "[]"
             return f"No {entity_type}s found."
 
         return format_mcp_list(
@@ -222,7 +237,8 @@ def register_entity_tools(mcp: FastMCP):
             extra_fields=fields,
             key_field="shortId",
             name_field="summary",
-            template="- **#{key}** {name} ({basics})"
+            template="- **#{key}** {name} ({basics})",
+            output_format=output_format,
         )
 
     @mcp.tool()
@@ -231,6 +247,7 @@ def register_entity_tools(mcp: FastMCP):
         entity_type: str,
         entity_id: str,
         per_page: int | None = None,
+        output_format: str = "text",
     ) -> str:
         """Get changelog of a project, portfolio, or goal.
 
@@ -238,6 +255,7 @@ def register_entity_tools(mcp: FastMCP):
             entity_type: "project", "portfolio", or "goal"
             entity_id: Entity ID
             per_page: Results per page
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         kwargs = {}
@@ -245,6 +263,9 @@ def register_entity_tools(mcp: FastMCP):
             kwargs["per_page"] = per_page
 
         changes = await tracker.entities.changelog(entity_type, entity_id, **kwargs)
+
+        if output_format == "json":
+            return json.dumps(changes, ensure_ascii=False, default=str)
 
         if not changes:
             return f"No changelog for {entity_type} {entity_id}."
@@ -291,7 +312,7 @@ def register_entity_tools(mcp: FastMCP):
         if comment is not None:
             kwargs["comment"] = comment
 
-        result = await tracker.entities.update_key_results(entity_id, key_result_items, **kwargs)
+        await tracker.entities.update_key_results(entity_id, key_result_items, **kwargs)
         return f"Key results updated for goal {entity_id}."
 
     @mcp.tool()
@@ -315,7 +336,7 @@ def register_entity_tools(mcp: FastMCP):
         if comment is not None:
             kwargs["comment"] = comment
 
-        result = await tracker.entities.update_metrics(entity_type, entity_id, metric_items, **kwargs)
+        await tracker.entities.update_metrics(entity_type, entity_id, metric_items, **kwargs)
         return f"Metrics updated for {entity_type} {entity_id}."
 
     # --- Entity comments ---
@@ -326,6 +347,7 @@ def register_entity_tools(mcp: FastMCP):
         entity_type: str,
         entity_id: str,
         fields: list[str] | None = None,
+        output_format: str = "text",
     ) -> str:
         """List comments on a project, portfolio, or goal.
 
@@ -333,6 +355,7 @@ def register_entity_tools(mcp: FastMCP):
             entity_type: "project", "portfolio", or "goal"
             entity_id: Entity ID
             fields: Optional list of fields to show. Use ["all"] for all fields.
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         comments = await tracker.entities.comments.list(entity_type, entity_id)
@@ -342,7 +365,8 @@ def register_entity_tools(mcp: FastMCP):
             basic_fields=["createdBy", "createdAt"],
             extra_fields=fields,
             name_field="text",
-            template="[{key}] {basics}:\n{name}"
+            template="[{key}] {basics}:\n{name}",
+            output_format=output_format,
         )
 
     @mcp.tool()
@@ -387,7 +411,7 @@ def register_entity_tools(mcp: FastMCP):
             text: New comment text
         """
         tracker = ctx.lifespan_context["tracker"]
-        comment = await tracker.entities.comments.update(entity_type, entity_id, comment_id, text=text)
+        await tracker.entities.comments.update(entity_type, entity_id, comment_id, text=text)
         return f"Comment [{comment_id}] updated on {entity_type} {entity_id}."
 
     @mcp.tool()
@@ -415,15 +439,20 @@ def register_entity_tools(mcp: FastMCP):
         ctx: Context,
         entity_type: str,
         entity_id: str,
+        output_format: str = "text",
     ) -> str:
         """List links of a project, portfolio, or goal.
 
         Args:
             entity_type: "project", "portfolio", or "goal"
             entity_id: Entity ID
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         links = await tracker.entities.links.get(entity_type, entity_id)
+
+        if output_format == "json":
+            return json.dumps(links, ensure_ascii=False, default=str)
 
         if not links:
             return f"No links for {entity_type} {entity_id}."
@@ -457,7 +486,7 @@ def register_entity_tools(mcp: FastMCP):
             entity: Target entity ID
         """
         tracker = ctx.lifespan_context["tracker"]
-        result = await tracker.entities.links.create(entity_type, entity_id, relationship, entity)
+        await tracker.entities.links.create(entity_type, entity_id, relationship, entity)
         return f"Link created: {entity_type} {entity_id} —[{relationship}]→ {entity}"
 
     @mcp.tool()
@@ -485,15 +514,20 @@ def register_entity_tools(mcp: FastMCP):
         ctx: Context,
         entity_type: str,
         entity_id: str,
+        output_format: str = "text",
     ) -> str:
         """List attachments of a project, portfolio, or goal.
 
         Args:
             entity_type: "project", "portfolio", or "goal"
             entity_id: Entity ID
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         attachments = await tracker.entities.attachments.list(entity_type, entity_id)
+
+        if output_format == "json":
+            return json.dumps(attachments, ensure_ascii=False, default=str)
 
         if not attachments:
             return f"No attachments for {entity_type} {entity_id}."
@@ -555,7 +589,7 @@ def register_entity_tools(mcp: FastMCP):
         if deadline is not None:
             kwargs["deadline"] = deadline
 
-        result = await tracker.entities.checklists.create(entity_type, entity_id, text, **kwargs)
+        await tracker.entities.checklists.create(entity_type, entity_id, text, **kwargs)
         return f"Checklist item added to {entity_type} {entity_id}."
 
     @mcp.tool()
@@ -591,7 +625,7 @@ def register_entity_tools(mcp: FastMCP):
         if deadline is not None:
             kwargs["deadline"] = deadline
 
-        result = await tracker.entities.checklists.item.update(
+        await tracker.entities.checklists.item.update(
             entity_type, entity_id, item_id, **kwargs
         )
         return f"Checklist item [{item_id}] updated on {entity_type} {entity_id}."
@@ -635,7 +669,7 @@ def register_entity_tools(mcp: FastMCP):
         if comment is not None:
             kwargs["comment"] = comment
 
-        result = await tracker.entities.bulk.update(entity_type, entity_ids, **kwargs)
+        await tracker.entities.bulk.update(entity_type, entity_ids, **kwargs)
         return f"Bulk update started for {len(entity_ids)} {entity_type}(s)."
 
     # --- Entity settings ---
@@ -645,15 +679,19 @@ def register_entity_tools(mcp: FastMCP):
         ctx: Context,
         entity_type: str,
         entity_id: str,
+        output_format: str = "text",
     ) -> str:
         """Get access settings of a project, portfolio, or goal.
 
         Args:
             entity_type: "project", "portfolio", or "goal"
             entity_id: Entity ID
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         settings = await tracker.entities.settings.get(entity_type, entity_id)
+        if output_format == "json":
+            return json.dumps(settings, ensure_ascii=False, default=str)
         return f"Settings for {entity_type} {entity_id}:\n{settings}"
 
     @mcp.tool()
@@ -679,24 +717,40 @@ def register_entity_tools(mcp: FastMCP):
         if acl is not None:
             kwargs["acl"] = acl
 
-        result = await tracker.entities.settings.update(entity_type, entity_id, **kwargs)
+        await tracker.entities.settings.update(entity_type, entity_id, **kwargs)
         return f"Settings updated for {entity_type} {entity_id}."
 
 
-def _format_entity_full(entity: dict, entity_type: str, extra_fields: list[str] | None = None) -> str:
-    # Use format_mcp_item for standard formatting
+def _format_entity_full(
+    entity: dict,
+    entity_type: str,
+    extra_fields: list[str] | None = None,
+    output_format: str = "text",
+    full_description: bool = False,
+) -> str:
     res = format_mcp_item(
         entity, entity_type.capitalize(),
         basic_fields=["entityStatus", "lead", "start", "end", "tags"],
         extra_fields=extra_fields,
         key_field="shortId",
         name_field="summary",
-        template="**{key}**: {name}\n{basics}"
+        template="**{key}**: {name}\n{basics}",
+        output_format=output_format,
+        full_description=full_description,
     )
 
-    # Checklist items (specific logic for entities)
     fields = entity.get("fields", {})
     checklist = fields.get("checklistItems", [])
+
+    if output_format == "json":
+        obj = json.loads(res)
+        if checklist:
+            obj["checklistItems"] = [
+                {"text": i.get("text", "?"), "checked": i.get("checked", False)}
+                for i in checklist
+            ]
+        return json.dumps(obj, ensure_ascii=False, default=str)
+
     if checklist:
         done = sum(1 for i in checklist if i.get("checked"))
         res += f"\n\nChecklist ({done}/{len(checklist)}):"

@@ -1,16 +1,30 @@
+import json
+
 from fastmcp import FastMCP, Context
 
 
 def register_external_link_tools(mcp: FastMCP):
 
     @mcp.tool()
-    async def list_external_applications(ctx: Context) -> str:
-        """List external applications registered for issue linking."""
+    async def list_external_applications(
+        ctx: Context,
+        output_format: str = "text",
+    ) -> str:
+        """List external applications registered for issue linking.
+
+        Args:
+            output_format: Response format: "text" (default, markdown) or "json"
+        """
         tracker = ctx.lifespan_context["tracker"]
         apps = await tracker.external.links.get_applications()
 
         if not apps:
+            if output_format == "json":
+                return "[]"
             return "No external applications found."
+
+        if output_format == "json":
+            return json.dumps(apps, ensure_ascii=False, default=str)
 
         lines = ["External applications:\n"]
         for app in apps:
@@ -23,17 +37,24 @@ def register_external_link_tools(mcp: FastMCP):
     async def list_external_links(
         ctx: Context,
         issue_key: str,
+        output_format: str = "text",
     ) -> str:
         """List external links of an issue.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         links = await tracker.external.links.list(issue_key)
 
         if not links:
+            if output_format == "json":
+                return "[]"
             return f"No external links for {issue_key}."
+
+        if output_format == "json":
+            return json.dumps(links, ensure_ascii=False, default=str)
 
         lines = [f"External links for {issue_key}:\n"]
         for link in links:

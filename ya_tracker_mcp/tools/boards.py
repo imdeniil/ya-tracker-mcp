@@ -1,3 +1,4 @@
+import json
 from fastmcp import FastMCP, Context
 from ..utils.directory_manager import manager
 from ..utils.formatters import format_mcp_list
@@ -10,12 +11,14 @@ def register_board_tools(mcp: FastMCP):
         ctx: Context,
         fields: list[str] | None = None,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List all boards.
 
         Args:
             fields: Optional list of additional fields (e.g. ["owner", "sprintsAvailable"])
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         boards = await manager.get("boards", tracker.boards.list, force=not use_cache)
@@ -23,22 +26,27 @@ def register_board_tools(mcp: FastMCP):
         return format_mcp_list(
             boards, "Boards",
             basic_fields=[],
-            extra_fields=fields
+            extra_fields=fields,
+            output_format=output_format,
         )
 
     @mcp.tool()
     async def get_board(
         ctx: Context,
         board_id: int,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Get board details.
 
         Args:
             board_id: Board ID
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
         board = await tracker.boards.get(board_id)
-        return _format_board(board)
+        return _format_board(board, output_format=output_format, full_description=full_description)
 
     @mcp.tool()
     async def list_sprints(
@@ -46,6 +54,7 @@ def register_board_tools(mcp: FastMCP):
         board_id: int,
         fields: list[str] | None = None,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List sprints of a board.
 
@@ -53,6 +62,7 @@ def register_board_tools(mcp: FastMCP):
             board_id: Board ID
             fields: Optional list of additional fields
             use_cache: Whether to use local cache (default: True)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         
@@ -67,7 +77,8 @@ def register_board_tools(mcp: FastMCP):
             sprints, f"Sprints for board {board_id}",
             basic_fields=["startDate", "endDate", "status"],
             extra_fields=fields,
-            template="- [{key}] **{name}** ({basics})"
+            template="- [{key}] **{name}** ({basics})",
+            output_format=output_format,
         )
 
     @mcp.tool()
@@ -107,17 +118,22 @@ def register_board_tools(mcp: FastMCP):
     async def list_board_columns(
         ctx: Context,
         board_id: int,
+        output_format: str = "text",
     ) -> str:
         """List columns of a board.
 
         Args:
             board_id: Board ID
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         columns = await tracker.boards.columns.list(board_id)
 
         if not columns:
             return f"No columns for board {board_id}."
+
+        if output_format == "json":
+            return json.dumps(columns, ensure_ascii=False, default=str)
 
         lines = [f"Columns for board {board_id} ({len(columns)}):\n"]
         for c in columns:
@@ -139,6 +155,8 @@ def register_board_tools(mcp: FastMCP):
         sprints_available: bool | None = None,
         backlog_available: bool | None = None,
         board_permissions_template: str | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Create a new board.
 
@@ -148,6 +166,8 @@ def register_board_tools(mcp: FastMCP):
             sprints_available: Enable sprints (Scrum)
             backlog_available: Enable backlog
             board_permissions_template: Permission template ("private", etc.)
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
         kwargs = {}
@@ -161,7 +181,7 @@ def register_board_tools(mcp: FastMCP):
         # Invalidate boards cache
         await manager.get("boards", tracker.boards.list, force=True)
         
-        return _format_board(board)
+        return _format_board(board, output_format=output_format, full_description=full_description)
 
     @mcp.tool()
     async def update_board(
@@ -214,7 +234,10 @@ def register_board_tools(mcp: FastMCP):
         return f"Board [{board_id}] deleted."
 
 
-def _format_board(b: dict) -> str:
+def _format_board(b: dict, output_format: str = "text", full_description: bool = False) -> str:
+    if output_format == "json":
+        return json.dumps(b, ensure_ascii=False, default=str)
+
     bid = b.get("id", "?")
     name = b.get("name", "")
     lines = [f"**Board [{bid}]**: {name}"]

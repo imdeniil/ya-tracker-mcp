@@ -1,3 +1,4 @@
+import json
 from fastmcp import FastMCP, Context
 from ..utils.formatters import format_mcp_item, format_mcp_list
 
@@ -11,6 +12,8 @@ def register_comment_tools(mcp: FastMCP):
         text: str,
         summonees: list[str] | None = None,
         fields: list[str] | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Add a comment to an issue.
 
@@ -19,6 +22,8 @@ def register_comment_tools(mcp: FastMCP):
             text: Comment text (YFM markdown supported)
             summonees: List of user logins to summon
             fields: Optional list of fields to show in response. Use ["all"] for all fields.
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -29,19 +34,21 @@ def register_comment_tools(mcp: FastMCP):
         comment = await tracker.issues.comments.create(
             issue_key, text, **kwargs
         )
-        return _format_comment_full(comment, fields)
+        return _format_comment_full(comment, fields, output_format=output_format, full_description=full_description)
 
     @mcp.tool()
     async def list_comments(
         ctx: Context,
         issue_key: str,
         fields: list[str] | None = None,
+        output_format: str = "text",
     ) -> str:
         """List all comments on an issue.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")
             fields: Optional list of fields to show. Use ["all"] for all fields.
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         comments = await tracker.issues.comments.list(issue_key)
@@ -51,7 +58,8 @@ def register_comment_tools(mcp: FastMCP):
             basic_fields=["createdBy", "createdAt"],
             extra_fields=fields,
             name_field="text",
-            template="[{key}] {basics}:\n{name}"
+            template="[{key}] {basics}:\n{name}",
+            output_format=output_format,
         )
 
     @mcp.tool()
@@ -61,6 +69,8 @@ def register_comment_tools(mcp: FastMCP):
         comment_id: str,
         text: str,
         fields: list[str] | None = None,
+        output_format: str = "text",
+        full_description: bool = False,
     ) -> str:
         """Update a comment.
 
@@ -69,12 +79,14 @@ def register_comment_tools(mcp: FastMCP):
             comment_id: Comment ID
             text: New comment text
             fields: Optional list of fields to show in response.
+            output_format: Response format: "text" (default, markdown) or "json"
+            full_description: If true, do not truncate description (default false)
         """
         tracker = ctx.lifespan_context["tracker"]
         comment = await tracker.issues.comments.update(
             issue_key, comment_id, text
         )
-        return _format_comment_full(comment, fields)
+        return _format_comment_full(comment, fields, output_format=output_format, full_description=full_description)
 
     @mcp.tool()
     async def delete_comment(
@@ -93,12 +105,19 @@ def register_comment_tools(mcp: FastMCP):
         return f"Comment {comment_id} deleted from {issue_key}."
 
 
-def _format_comment_full(comment: dict, extra_fields: list[str] | None = None) -> str:
+def _format_comment_full(
+    comment: dict,
+    extra_fields: list[str] | None = None,
+    output_format: str = "text",
+    full_description: bool = False,
+) -> str:
     return format_mcp_item(
         comment, "Comment",
         basic_fields=["createdBy", "createdAt"],
         extra_fields=extra_fields,
         name_field="text",
         template="[{key}] {basics}:\n{name}",
-        description_field=None # We use name_field for text
+        description_field=None, # We use name_field for text
+        output_format=output_format,
+        full_description=full_description,
     )

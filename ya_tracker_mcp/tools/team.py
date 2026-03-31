@@ -1,3 +1,4 @@
+import json
 import os
 
 import yaml
@@ -15,11 +16,23 @@ def _load_team() -> list[dict]:
 def register_team_tools(mcp: FastMCP):
 
     @mcp.tool()
-    async def list_team(ctx: Context) -> str:
-        """List team members from the team directory."""
+    async def list_team(
+        ctx: Context,
+        output_format: str = "text",
+    ) -> str:
+        """List team members from the team directory.
+
+        Args:
+            output_format: Response format: "text" (default, markdown) or "json"
+        """
         team = _load_team()
         if not team:
+            if output_format == "json":
+                return "[]"
             return "No team members configured. Edit config/team.yaml to add your team."
+
+        if output_format == "json":
+            return json.dumps(team, ensure_ascii=False, default=str)
 
         lines = ["Team directory:\n"]
         for m in team:
@@ -33,16 +46,21 @@ def register_team_tools(mcp: FastMCP):
     async def get_team_member(
         ctx: Context,
         login: str,
+        output_format: str = "text",
     ) -> str:
         """Get team member details.
 
         Args:
             login: Member login
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         team = _load_team()
         member = next((m for m in team if m.get("login") == login), None)
         if not member:
             return f"Team member '{login}' not found."
+
+        if output_format == "json":
+            return json.dumps(member, ensure_ascii=False, default=str)
 
         lines = [f"**{member.get('name', login)}** (@{login})"]
         lines.append(f"Role: {member.get('role', '?')}")
@@ -66,12 +84,14 @@ def register_team_tools(mcp: FastMCP):
         ctx: Context,
         area: str | None = None,
         queue: str | None = None,
+        output_format: str = "text",
     ) -> str:
         """Find a team member by area of expertise or queue.
 
         Args:
             area: Area keyword (e.g. "API", "React", "testing")
             queue: Queue key (e.g. "DEV")
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         team = _load_team()
         if not team:
@@ -94,6 +114,9 @@ def register_team_tools(mcp: FastMCP):
 
         if not matches:
             return f"No team members found for area='{area}', queue='{queue}'."
+
+        if output_format == "json":
+            return json.dumps([m for _, m in matches], ensure_ascii=False, default=str)
 
         lines = ["Suggested assignees:\n"]
         for score, m in matches:

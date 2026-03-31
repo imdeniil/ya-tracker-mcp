@@ -1,3 +1,5 @@
+import json
+
 from fastmcp import FastMCP, Context
 
 
@@ -21,6 +23,7 @@ def register_import_tools(mcp: FastMCP):
         resolution: str | None = None,
         resolved_at: str | None = None,
         resolved_by: str | None = None,
+        output_format: str = "text",
     ) -> str:
         """Import an issue preserving original timestamps and author.
 
@@ -40,6 +43,7 @@ def register_import_tools(mcp: FastMCP):
             resolution: Resolution key (if resolved)
             resolved_at: Resolution time (ISO 8601)
             resolved_by: Who resolved (login)
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -75,6 +79,9 @@ def register_import_tools(mcp: FastMCP):
             **kwargs,
         )
 
+        if output_format == "json":
+            return json.dumps(issue, ensure_ascii=False, default=str)
+
         issue_key = issue.get("key", "?")
         return f"Issue **{issue_key}** imported.\nhttps://tracker.yandex.ru/{issue_key}"
 
@@ -85,6 +92,7 @@ def register_import_tools(mcp: FastMCP):
         text: str,
         created_at: str,
         created_by: str,
+        output_format: str = "text",
     ) -> str:
         """Import a comment with original timestamp and author.
 
@@ -93,11 +101,14 @@ def register_import_tools(mcp: FastMCP):
             text: Comment text
             created_at: Original creation time (ISO 8601, must be within issue's created-updated interval)
             created_by: Original author login
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         comment = await tracker.imports.comment(
             issue_key, text, created_at, created_by
         )
+        if output_format == "json":
+            return json.dumps(comment, ensure_ascii=False, default=str)
         cid = comment.get("id", "?")
         return f"Comment [{cid}] imported to {issue_key}."
 

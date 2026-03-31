@@ -1,3 +1,5 @@
+import json
+
 from fastmcp import FastMCP, Context
 
 
@@ -9,6 +11,7 @@ def register_dashboard_tools(mcp: FastMCP):
         name: str,
         layout: str | None = None,
         owner: str | None = None,
+        output_format: str = "text",
     ) -> str:
         """Create a dashboard.
 
@@ -16,6 +19,7 @@ def register_dashboard_tools(mcp: FastMCP):
             name: Dashboard name
             layout: Layout type
             owner: Owner login
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         kwargs = {}
@@ -25,6 +29,8 @@ def register_dashboard_tools(mcp: FastMCP):
             kwargs["owner"] = owner
 
         result = await tracker.dashboards.create(name, **kwargs)
+        if output_format == "json":
+            return json.dumps(result, ensure_ascii=False, default=str)
         did = result.get("id", "?")
         return f"Dashboard created: [{did}] {name}"
 
@@ -35,6 +41,7 @@ def register_dashboard_tools(mcp: FastMCP):
         description: str,
         query: str | None = None,
         filter_id: str | None = None,
+        output_format: str = "text",
     ) -> str:
         """Create a cycle time widget on a dashboard.
 
@@ -43,6 +50,7 @@ def register_dashboard_tools(mcp: FastMCP):
             description: Widget description
             query: Query string for filtering issues
             filter_id: Filter ID for filtering issues
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         kwargs = {}
@@ -54,5 +62,7 @@ def register_dashboard_tools(mcp: FastMCP):
         result = await tracker.dashboards.create_cycle_time_widget(
             dashboard_id, description, **kwargs
         )
+        if output_format == "json":
+            return json.dumps(result, ensure_ascii=False, default=str)
         wid = result.get("id", "?")
         return f"Cycle time widget created: [{wid}] on dashboard {dashboard_id}"

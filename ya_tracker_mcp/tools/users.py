@@ -1,3 +1,5 @@
+import json
+
 from fastmcp import FastMCP, Context
 from ..utils.directory_manager import manager
 from ..utils.formatters import format_mcp_list
@@ -6,24 +8,37 @@ from ..utils.formatters import format_mcp_list
 def register_user_tools(mcp: FastMCP):
 
     @mcp.tool()
-    async def get_myself(ctx: Context) -> str:
-        """Get current authenticated user info."""
+    async def get_myself(
+        ctx: Context,
+        output_format: str = "text",
+    ) -> str:
+        """Get current authenticated user info.
+
+        Args:
+            output_format: Response format: "text" (default, markdown) or "json"
+        """
         tracker = ctx.lifespan_context["tracker"]
         user = await tracker.users.get_myself()
+        if output_format == "json":
+            return json.dumps(user, ensure_ascii=False, default=str)
         return _format_user(user)
 
     @mcp.tool()
     async def get_user(
         ctx: Context,
         user_id: str,
+        output_format: str = "text",
     ) -> str:
         """Get info about a specific user.
 
         Args:
             user_id: User login or UID
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
         user = await tracker.users.get(user_id)
+        if output_format == "json":
+            return json.dumps(user, ensure_ascii=False, default=str)
         return _format_user(user)
 
     @mcp.tool()
@@ -32,6 +47,7 @@ def register_user_tools(mcp: FastMCP):
         fields: list[str] | None = None,
         per_page: int | None = None,
         use_cache: bool = True,
+        output_format: str = "text",
     ) -> str:
         """List organization users.
 
@@ -39,6 +55,7 @@ def register_user_tools(mcp: FastMCP):
             fields: Optional list of additional fields (e.g. ["uid", "dismissed"])
             per_page: Results per page (if not using cache)
             use_cache: Whether to use local cache (default: True). Note: per_page is ignored if using cache.
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -53,7 +70,8 @@ def register_user_tools(mcp: FastMCP):
             extra_fields=fields,
             key_field="login",
             name_field="display",
-            template="- **{name}** (@{key}) | {basics}"
+            template="- **{name}** (@{key}) | {basics}",
+            output_format=output_format,
         )
 
 

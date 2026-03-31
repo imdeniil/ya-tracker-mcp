@@ -1,3 +1,5 @@
+import json
+
 from fastmcp import FastMCP, Context
 
 
@@ -7,11 +9,13 @@ def register_overview_tools(mcp: FastMCP):
     async def issue_overview(
         ctx: Context,
         issue_key: str,
+        output_format: str = "text",
     ) -> str:
         """Get a comprehensive overview of an issue including status, comments, links, checklist and worklog.
 
         Args:
             issue_key: Issue key (e.g. "DEV-123")
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -30,17 +34,29 @@ def register_overview_tools(mcp: FastMCP):
         except Exception:
             worklogs = []
 
+        if output_format == "json":
+            data = {
+                "issue": issue,
+                "comments": comments,
+                "links": links,
+                "checklists": checklists,
+                "worklogs": worklogs,
+            }
+            return json.dumps(data, ensure_ascii=False, default=str)
+
         return _build_issue_overview(issue, comments, links, checklists, worklogs)
 
     @mcp.tool()
     async def queue_overview(
         ctx: Context,
         queue_key: str,
+        output_format: str = "text",
     ) -> str:
         """Get an overview of a queue: open issues count, top priority issues.
 
         Args:
             queue_key: Queue key (e.g. "DEV")
+            output_format: Response format: "text" (default, markdown) or "json"
         """
         tracker = ctx.lifespan_context["tracker"]
 
@@ -54,6 +70,14 @@ def register_overview_tools(mcp: FastMCP):
             query=f'Queue: {queue_key} Resolution: empty() "Sort By": Priority ASC',
             per_page=10,
         )
+
+        if output_format == "json":
+            data = {
+                "queue": queue,
+                "open_count": open_count,
+                "top_issues": top_issues,
+            }
+            return json.dumps(data, ensure_ascii=False, default=str)
 
         return _build_queue_overview(queue, open_count, top_issues)
 

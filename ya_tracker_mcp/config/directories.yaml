@@ -1,0 +1,24 @@
+config:
+  ttls:
+    issue_types: 86400
+    statuses: 86400
+    priorities: 86400
+    resolutions: 86400
+    global_fields: 86400
+    field_categories: 86400
+    queues: 3600
+    components: 3600
+    boards: 3600
+    sprints: 1800
+    users: 3600
+    queue_fields: 1800
+    queue_tags: 900
+data:
+  statuses:
+    values:
+    - id: fresh
+      name: Fresh Status
+    timestamp: 1774490982.8320582
+    updated_at: '2026-03-26T05:09:42.832061'
+meta:
+  last_saved: '2026-03-26T05:09:42.832189'
