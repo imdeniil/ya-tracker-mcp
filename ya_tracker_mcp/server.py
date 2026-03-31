@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
-from fastmcp import FastMCP, Context
+from fastmcp import FastMCP
 from YaTrackerApi import YandexTrackerClient
 
 from ya_tracker_mcp.tools.issues import register_issue_tools
@@ -43,7 +43,14 @@ async def lifespan(mcp: FastMCP) -> AsyncIterator[dict]:
 
 mcp = FastMCP(
     "Yandex Tracker",
-    instructions="MCP server for Yandex Tracker API",
+    instructions=(
+        "MCP server for Yandex Tracker API\n\n"
+        "Universal parameters available on most tools:\n"
+        '- output_format: "text" (default, markdown) or "json" (structured data)\n'
+        "- full_description: set true to return full description without truncation (default: false, truncates at 1000 chars)\n"
+        '- fields: list of extra fields to show, use ["all"] for all fields\n\n'
+        "Read the tracker://tips resource for important caveats about local fields, query syntax, and bulk operations."
+    ),
     lifespan=lifespan,
 )
 
