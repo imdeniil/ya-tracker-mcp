@@ -34,7 +34,7 @@ ya_tracker_mcp/
 │   └── formatters.py       — format_mcp_item/format_mcp_list для MCP-ответов
 ├── resources/static.py    — 6 статических ресурсов (query language, YFM, типы связей и др.)
 ├── prompts/prompts.py     — 4 промпта (мои задачи, визард, декомпозиция, отчёт просрочки)
-└── config/                — YAML-конфиги (presets.yaml, team.yaml, directories.yaml)
+└── ~/.cache/ya-tracker-mcp/ — YAML-конфиги (presets.yaml, team.yaml, directories.yaml)
 ```
 
 ## Ключевые паттерны
@@ -48,7 +48,7 @@ ya_tracker_mcp/
 3. Если новый модуль — импортировать и вызвать `register_*_tools(mcp)` в `server.py`
 
 ### Кеширование справочников
-`DirectoryManager` (`utils/directory_manager.py`) хранит данные в `config/directories.yaml` с настраиваемыми TTL. Инструменты справочников принимают `use_cache: bool = True`.
+`DirectoryManager` (`utils/directory_manager.py`) хранит данные в `~/.cache/ya-tracker-mcp/directories.yaml` с настраиваемыми TTL. Инструменты справочников принимают `use_cache: bool = True`.
 
 ### Форматирование ответов
 `utils/formatters.py` — `format_mcp_item` и `format_mcp_list` с шаблонами и поддержкой `extra_fields`.

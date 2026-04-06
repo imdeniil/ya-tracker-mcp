@@ -4,7 +4,8 @@ import os
 import yaml
 from fastmcp import FastMCP, Context
 
-PRESETS_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "presets.yaml")
+CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "ya-tracker-mcp")
+PRESETS_PATH = os.path.join(CACHE_DIR, "presets.yaml")
 
 
 def _load_presets() -> dict:
@@ -37,7 +38,7 @@ def register_preset_tools(mcp: FastMCP):
         if not presets:
             if output_format == "json":
                 return "{}"
-            return "No presets configured. Edit config/presets.yaml to add presets."
+            return f"No presets configured. Edit {PRESETS_PATH} to add presets."
 
         if output_format == "json":
             return json.dumps(presets, ensure_ascii=False, default=str)

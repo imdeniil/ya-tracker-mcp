@@ -3,8 +3,9 @@ import time
 import yaml
 from datetime import datetime
 
-# Path to the directories configuration and data
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "directories.yaml")
+# Path to the directories configuration and data — shared across all sessions
+CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "ya-tracker-mcp")
+CONFIG_PATH = os.path.join(CACHE_DIR, "directories.yaml")
 
 DEFAULT_TTLS = {
     "issue_types": 86400,    # 24h

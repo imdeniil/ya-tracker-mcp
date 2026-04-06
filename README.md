@@ -329,7 +329,7 @@ You need an OAuth token and organization ID:
 
 ### Task Presets
 
-Define presets in `config/presets.yaml` or manage at runtime with `add_preset` / `remove_preset`. `params` section supports all fields from `create_issue` (type, priority, assignee, tags, components, sprint, parent, project, followers, deadline, story_points, original_estimation, extra_fields):
+Define presets in `~/.cache/ya-tracker-mcp/presets.yaml` or manage at runtime with `add_preset` / `remove_preset`. `params` section supports all fields from `create_issue` (type, priority, assignee, tags, components, sprint, parent, project, followers, deadline, story_points, original_estimation, extra_fields):
 
 ```yaml
 presets:
@@ -354,7 +354,7 @@ presets:
 
 ### Team Directory
 
-Edit `config/team.yaml` to enable smart assignee suggestions:
+Edit `~/.cache/ya-tracker-mcp/team.yaml` to enable smart assignee suggestions:
 
 ```yaml
 team:

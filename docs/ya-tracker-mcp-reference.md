@@ -1151,7 +1151,7 @@ team-directory:
 ### 9.3 Структура кэша
 
 ```yaml
-# config/directories.yaml — кэш справочников
+# ~/.cache/ya-tracker-mcp/directories.yaml — кэш справочников
 # Обновляется инструментом sync_directories
 
 meta:
@@ -1547,7 +1547,7 @@ sprint_overview(board_id, sprint_id):
 ```
 ya-tracker-mcp/
 ├── server.py              # FastMCP, регистрация tools/prompts/resources
-├── config/
+├── ~/.cache/ya-tracker-mcp/  # Данные хранятся в домашней директории (общие для всех сессий)
 │   ├── presets.yaml        # Пресеты задач (раздел 7)
 │   ├── team.yaml           # Справочник сотрудников (раздел 8)
 │   └── directories.yaml    # Кэш справочников сущностей (раздел 9, автогенерация)

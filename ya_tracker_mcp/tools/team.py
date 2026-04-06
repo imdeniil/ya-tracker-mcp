@@ -4,10 +4,13 @@ import os
 import yaml
 from fastmcp import FastMCP, Context
 
-TEAM_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "team.yaml")
+CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "ya-tracker-mcp")
+TEAM_PATH = os.path.join(CACHE_DIR, "team.yaml")
 
 
 def _load_team() -> list[dict]:
+    if not os.path.exists(TEAM_PATH):
+        return []
     with open(TEAM_PATH) as f:
         data = yaml.safe_load(f)
     return data.get("team", []) or []
@@ -29,7 +32,7 @@ def register_team_tools(mcp: FastMCP):
         if not team:
             if output_format == "json":
                 return "[]"
-            return "No team members configured. Edit config/team.yaml to add your team."
+            return f"No team members configured. Edit {TEAM_PATH} to add your team."
 
         if output_format == "json":
             return json.dumps(team, ensure_ascii=False, default=str)
