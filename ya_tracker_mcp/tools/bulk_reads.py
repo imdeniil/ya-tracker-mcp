@@ -90,10 +90,12 @@ def _link_type_matches(link: dict, link_types: list[str]) -> bool:
 
 
 def _link_target_closed(link: dict) -> bool:
-    target = link.get("object")
-    if not isinstance(target, dict):
+    # In Yandex Tracker /links response, the target's status lives on the link
+    # object itself (not inside "object"). A status with key "closed" means done.
+    status = link.get("status")
+    if not isinstance(status, dict):
         return False
-    return bool(target.get("resolution"))
+    return status.get("key") == "closed"
 
 
 def _compact_link(link: dict) -> dict:
@@ -108,7 +110,8 @@ def _compact_link(link: dict) -> dict:
     target_key = target.get("key", "?")
     target_display = target.get("display") or target.get("summary") or ""
 
-    status = target.get("status")
+    # status lives on the link, not inside "object"
+    status = link.get("status")
     if isinstance(status, dict):
         status_id = status.get("key") or status.get("display") or ""
     else:
@@ -161,4 +164,9 @@ def _format_one_line(link: dict) -> str:
     target: dict = raw_target if isinstance(raw_target, dict) else {}
     target_key = target.get("key", "?")
     target_display = target.get("display") or target.get("summary") or ""
-    return f"{arrow} {type_id} {target_key} {target_display}"
+    status = link.get("status")
+    status_str = ""
+    if isinstance(status, dict):
+        status_key = status.get("key") or status.get("display") or ""
+        status_str = f" [{status_key}]" if status_key else ""
+    return f"{arrow} {type_id} {target_key}{status_str} {target_display}"
