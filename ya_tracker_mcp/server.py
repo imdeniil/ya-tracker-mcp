@@ -22,6 +22,7 @@ from ya_tracker_mcp.tools.team import register_team_tools
 from ya_tracker_mcp.tools.directories import register_directory_tools
 from ya_tracker_mcp.tools.automations import register_automation_tools
 from ya_tracker_mcp.tools.bulk import register_bulk_tools
+from ya_tracker_mcp.tools.bulk_reads import register_bulk_reads_tools
 from ya_tracker_mcp.tools.imports import register_import_tools
 from ya_tracker_mcp.tools.filters import register_filter_tools
 from ya_tracker_mcp.tools.dashboards import register_dashboard_tools
@@ -79,6 +80,7 @@ register_team_tools(mcp)
 register_directory_tools(mcp)
 register_automation_tools(mcp)
 register_bulk_tools(mcp)
+register_bulk_reads_tools(mcp)
 register_import_tools(mcp)
 register_filter_tools(mcp)
 register_dashboard_tools(mcp)

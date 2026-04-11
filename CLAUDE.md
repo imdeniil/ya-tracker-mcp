@@ -18,7 +18,7 @@ MCP-сервер для Yandex Tracker API на базе FastMCP. Версия �
 ```
 ya_tracker_mcp/
 ├── server.py              — точка входа, lifespan (инициализация клиента), регистрация всех модулей
-├── tools/                 — 22 модуля MCP-инструментов (~4200 строк)
+├── tools/                 — 23 модуля MCP-инструментов
 │   ├── issues.py          — CRUD задач, поиск, changelog, перемещение
 │   ├── entities.py        — проекты/портфолио/цели (CRUD, комментарии, связи, чеклисты, метрики)
 │   ├── directories.py     — справочники (типы, статусы, приоритеты, поля) с кешированием
@@ -26,6 +26,7 @@ ya_tracker_mcp/
 │   ├── queues.py          — очереди и версии
 │   ├── boards.py          — доски и колонки
 │   ├── overviews.py       — сводки по задаче/очереди
+│   ├── bulk_reads.py      — параллельный fan-out для read-операций (bulk_list_links)
 │   ├── presets.py         — пресеты создания задач из YAML-конфига
 │   └── ...                — comments, links, transitions, users, worklog, checklists,
 │                            attachments, team, bulk, imports, filters, dashboards, external_links

@@ -1,6 +1,6 @@
 # ya-tracker-mcp
 
-MCP server for [Yandex Tracker](https://tracker.yandex.ru/) API. Provides 145 tools for managing issues, projects, boards, sprints, worklog and more through the [Model Context Protocol](https://modelcontextprotocol.io/).
+MCP server for [Yandex Tracker](https://tracker.yandex.ru/) API. Provides 146 tools for managing issues, projects, boards, sprints, worklog and more through the [Model Context Protocol](https://modelcontextprotocol.io/).
 
 Built with [FastMCP](https://gofastmcp.com) and [YaTrackerApi](https://pypi.org/project/YaTrackerApi/).
 
@@ -58,7 +58,7 @@ You need an OAuth token and organization ID:
 1. **OAuth token** - get at [oauth.yandex.ru](https://oauth.yandex.ru/) with Tracker access
 2. **Organization ID** - find in Tracker admin settings or via API `GET /v3/myself`
 
-## Tools (145)
+## Tools (146)
 
 ### Issues (7)
 | Tool | Description |
@@ -252,6 +252,13 @@ You need an OAuth token and organization ID:
 | `bulk_transition` | Transition multiple issues |
 | `get_bulk_status` | Check operation status |
 | `get_bulk_failed_issues` | Get failed issues from bulk operation |
+
+### Bulk Reads (1)
+Parallel fan-out for read operations — one tool call instead of N, with compact output by default.
+
+| Tool | Description |
+|------|-------------|
+| `bulk_list_links` | Fetch links for multiple issues in parallel (filter by type, compact format, configurable concurrency) |
 
 ### Import (4)
 | Tool | Description |
