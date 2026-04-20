@@ -1,6 +1,8 @@
+import json
 import os
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from typing import get_type_hints, get_origin, get_args
 
 from fastmcp import FastMCP
 from YaTrackerApi import YandexTrackerClient
@@ -87,6 +89,52 @@ register_dashboard_tools(mcp)
 register_external_link_tools(mcp)
 register_resources(mcp)
 register_prompts(mcp)
+
+
+def _patch_function_tool_for_json_coercion():
+    """Patch FunctionTool.run to coerce JSON strings to dicts/lists.
+
+    Some MCP clients (e.g. Claude Code) serialize dict/list parameters as
+    JSON strings instead of native objects. Pydantic's validate_python rejects
+    this, so we pre-process arguments based on the function's type annotations.
+    """
+    from fastmcp.tools.function_tool import FunctionTool
+
+    _original_run = FunctionTool.run
+
+    async def _patched_run(self, arguments: dict):
+        fn = self.fn
+        hints = {}
+        try:
+            hints = get_type_hints(fn, include_extras=True)
+        except Exception:
+            pass
+
+        if hints:
+            for param_name, param_type in hints.items():
+                if param_name not in arguments:
+                    continue
+                value = arguments[param_name]
+                if not isinstance(value, str):
+                    continue
+
+                # Handle Optional[dict] / dict | None
+                args = get_args(param_type)
+                inner = args[0] if args and args[-1] is type(None) else param_type
+                inner_origin = get_origin(inner) or inner
+
+                if inner_origin is dict:
+                    try:
+                        arguments[param_name] = json.loads(value)
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+
+        return await _original_run(self, arguments)
+
+    FunctionTool.run = _patched_run
+
+
+_patch_function_tool_for_json_coercion()
 
 
 def main():
